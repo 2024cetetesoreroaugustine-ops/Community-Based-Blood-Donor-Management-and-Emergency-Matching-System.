@@ -1,0 +1,230 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/bootstrap.php';
+
+function get_pdo(): PDO
+{
+    static $pdo = null;
+
+    if ($pdo instanceof PDO) {
+        return $pdo;
+    }
+
+    $host = env_or('PULSELINK_DB_HOST', '127.0.0.1');
+    $port = env_or('PULSELINK_DB_PORT', '3306');
+    $db = env_or('PULSELINK_DB_NAME', 'Blood_donor');
+    $user = env_or('PULSELINK_DB_USER', 'root');
+    $pass = env_or('PULSELINK_DB_PASS', 'Raf082705');
+
+    $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
+
+    try {
+        $pdo = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ]);
+    } catch (Throwable $e) {
+        json_response(false, 'Database connection failed: ' . $e->getMessage(), null, 500);
+    }
+
+    ensure_schema($pdo);
+
+    return $pdo;
+}
+
+function ensure_schema(PDO $pdo): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+
+    $queries = [
+        "CREATE TABLE IF NOT EXISTS ROLES (
+            RoleID INT PRIMARY KEY,
+            RoleName VARCHAR(50) NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS BLOOD_TYPE (
+            BloodTypeID INT PRIMARY KEY,
+            BloodTypeName VARCHAR(5) NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS BARANGAY (
+            BarangayID INT PRIMARY KEY,
+            BarangayName VARCHAR(100) NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS USERS (
+            UserID INT AUTO_INCREMENT PRIMARY KEY,
+            Username VARCHAR(60) NOT NULL UNIQUE,
+            Password VARCHAR(255) NOT NULL,
+            ROLES_RoleID INT NOT NULL,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_users_role FOREIGN KEY (ROLES_RoleID) REFERENCES ROLES(RoleID)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS CIT_Health_OFF_ADM (
+            admin_id INT AUTO_INCREMENT PRIMARY KEY,
+            FIR_name VARCHAR(55) NOT NULL,
+            LST_name VARCHAR(55) NOT NULL,
+            USERS_UserID INT NOT NULL UNIQUE,
+            CONSTRAINT fk_cho_user FOREIGN KEY (USERS_UserID) REFERENCES USERS(UserID) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS Hospital_STF (
+            Hospital_id INT AUTO_INCREMENT PRIMARY KEY,
+            Hospital_name VARCHAR(150) NOT NULL,
+            `ADD` VARCHAR(150) NULL,
+            CTT_number VARCHAR(15) NOT NULL,
+            USERS_UserID INT NOT NULL UNIQUE,
+            BARANGAY_BarangayID INT NOT NULL,
+            CONSTRAINT fk_hospital_user FOREIGN KEY (USERS_UserID) REFERENCES USERS(UserID) ON DELETE CASCADE,
+            CONSTRAINT fk_hospital_barangay FOREIGN KEY (BARANGAY_BarangayID) REFERENCES BARANGAY(BarangayID)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS Barangay_Health_Worker (
+            Woker_id INT AUTO_INCREMENT PRIMARY KEY,
+            FIR_name VARCHAR(50) NOT NULL,
+            LST_name VARCHAR(55) NOT NULL,
+            CTT_number VARCHAR(15) NOT NULL,
+            USERS_UserID INT NOT NULL UNIQUE,
+            BARANGAY_BarangayID INT NOT NULL,
+            CONSTRAINT fk_bhw_user FOREIGN KEY (USERS_UserID) REFERENCES USERS(UserID) ON DELETE CASCADE,
+            CONSTRAINT fk_bhw_barangay FOREIGN KEY (BARANGAY_BarangayID) REFERENCES BARANGAY(BarangayID)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS Volunteer_Blood_donor (
+            donor_id INT AUTO_INCREMENT PRIMARY KEY,
+            FIR_name VARCHAR(55) NOT NULL,
+            MID_NAME VARCHAR(55) NULL,
+            LST_name VARCHAR(55) NOT NULL,
+            SEX VARCHAR(15) NOT NULL,
+            BTH_DTE DATE NOT NULL,
+            phone_number VARCHAR(15) NOT NULL,
+            email VARCHAR(55) NULL,
+            `ADD` VARCHAR(150) NULL,
+            AVB_STU VARCHAR(30) NOT NULL DEFAULT 'Available',
+            RGS_DTE DATE NOT NULL,
+            USERS_UserID INT NOT NULL UNIQUE,
+            BARANGAY_BarangayID INT NOT NULL,
+            BLOOD_TYPE_BloodTypeID INT NOT NULL,
+            CONSTRAINT fk_donor_user FOREIGN KEY (USERS_UserID) REFERENCES USERS(UserID) ON DELETE CASCADE,
+            CONSTRAINT fk_donor_barangay FOREIGN KEY (BARANGAY_BarangayID) REFERENCES BARANGAY(BarangayID),
+            CONSTRAINT fk_donor_blood FOREIGN KEY (BLOOD_TYPE_BloodTypeID) REFERENCES BLOOD_TYPE(BloodTypeID)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS DONOR_VERIFICATION (
+            VerificationID INT AUTO_INCREMENT PRIMARY KEY,
+            VerificationStatus VARCHAR(20) NOT NULL,
+            VerificationDate DATE NOT NULL,
+            CIT_Health_OFF_ADM_admin_id INT NOT NULL,
+            Volunteer_Blood_donor_donor_id INT NOT NULL,
+            CONSTRAINT fk_ver_admin FOREIGN KEY (CIT_Health_OFF_ADM_admin_id) REFERENCES CIT_Health_OFF_ADM(admin_id),
+            CONSTRAINT fk_ver_donor FOREIGN KEY (Volunteer_Blood_donor_donor_id) REFERENCES Volunteer_Blood_donor(donor_id) ON DELETE CASCADE,
+            UNIQUE KEY uniq_ver_donor (Volunteer_Blood_donor_donor_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS EMG_Blood_REQ (
+            REQ_id INT AUTO_INCREMENT PRIMARY KEY,
+            patient_name VARCHAR(55) NOT NULL,
+            QTY_NDD INT NOT NULL,
+            REQ_DTE DATE NOT NULL,
+            REQ_STU VARCHAR(20) NOT NULL,
+            BLOOD_TYPE_BloodTypeID INT NOT NULL,
+            Hospital_STF_Hospital_id INT NOT NULL,
+            CONSTRAINT fk_req_blood FOREIGN KEY (BLOOD_TYPE_BloodTypeID) REFERENCES BLOOD_TYPE(BloodTypeID),
+            CONSTRAINT fk_req_hospital FOREIGN KEY (Hospital_STF_Hospital_id) REFERENCES Hospital_STF(Hospital_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS donor_Match (
+            Match_id INT AUTO_INCREMENT PRIMARY KEY,
+            RSO VARCHAR(50) NULL,
+            RSO_DTE DATE NULL,
+            donation_STU VARCHAR(20) NOT NULL DEFAULT 'Pending Confirmation',
+            EMG_Blood_REQ_REQ_id INT NOT NULL,
+            Volunteer_Blood_donor_donor_id INT NOT NULL,
+            CONSTRAINT fk_match_req FOREIGN KEY (EMG_Blood_REQ_REQ_id) REFERENCES EMG_Blood_REQ(REQ_id) ON DELETE CASCADE,
+            CONSTRAINT fk_match_donor FOREIGN KEY (Volunteer_Blood_donor_donor_id) REFERENCES Volunteer_Blood_donor(donor_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS Blood_Drive (
+            Blood_Drive_id INT AUTO_INCREMENT PRIMARY KEY,
+            EVT_name VARCHAR(180) NOT NULL,
+            LOC VARCHAR(255) NOT NULL,
+            SHD DATE NOT NULL,
+            STU VARCHAR(20) NOT NULL DEFAULT 'Scheduled',
+            BARANGAY_BarangayID INT NOT NULL,
+            CIT_Health_OFF_ADM_admin_id INT NULL,
+            CONSTRAINT fk_drive_barangay FOREIGN KEY (BARANGAY_BarangayID) REFERENCES BARANGAY(BarangayID),
+            CONSTRAINT fk_drive_admin FOREIGN KEY (CIT_Health_OFF_ADM_admin_id) REFERENCES CIT_Health_OFF_ADM(admin_id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS BLOOD_DRIVE_PAR (
+            ParticipationID INT AUTO_INCREMENT PRIMARY KEY,
+            ParticipationStatus VARCHAR(20) NOT NULL DEFAULT 'Joined',
+            Blood_Drive_Blood_Drive_id INT NOT NULL,
+            Volunteer_Blood_donor_donor_id INT NOT NULL,
+            CONSTRAINT fk_bdp_drive FOREIGN KEY (Blood_Drive_Blood_Drive_id) REFERENCES Blood_Drive(Blood_Drive_id) ON DELETE CASCADE,
+            CONSTRAINT fk_bdp_donor FOREIGN KEY (Volunteer_Blood_donor_donor_id) REFERENCES Volunteer_Blood_donor(donor_id) ON DELETE CASCADE,
+            UNIQUE KEY uniq_bdp (Blood_Drive_Blood_Drive_id, Volunteer_Blood_donor_donor_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS NOTIFICATION (
+            NotificationID INT AUTO_INCREMENT PRIMARY KEY,
+            Message VARCHAR(255) NOT NULL,
+            SentDate DATE NOT NULL,
+            USERS_UserID INT NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'Unread',
+            linked_req_id INT NULL,
+            donor_id INT NULL,
+            CONSTRAINT fk_notif_user FOREIGN KEY (USERS_UserID) REFERENCES USERS(UserID) ON DELETE CASCADE,
+            CONSTRAINT fk_notif_req FOREIGN KEY (linked_req_id) REFERENCES EMG_Blood_REQ(REQ_id) ON DELETE SET NULL,
+            CONSTRAINT fk_notif_donor FOREIGN KEY (donor_id) REFERENCES Volunteer_Blood_donor(donor_id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    ];
+
+    foreach ($queries as $sql) {
+        $pdo->exec($sql);
+    }
+
+    $pdo->exec("INSERT IGNORE INTO ROLES (RoleID, RoleName) VALUES
+        (1, 'City Health Office Admin'),
+        (2, 'Hospital Staff'),
+        (3, 'Barangay Health Worker'),
+        (4, 'Volunteer Blood Donor')");
+
+    $pdo->exec("INSERT IGNORE INTO BARANGAY (BarangayID, BarangayName) VALUES
+        (1, 'Apopong'),
+        (2, 'Baluan'),
+        (3, 'Bula'),
+        (4, 'Calumpang'),
+        (5, 'City Heights'),
+        (6, 'Labangal'),
+        (7, 'Lagao'),
+        (8, 'San Isidro')");
+
+    $pdo->exec("INSERT IGNORE INTO BLOOD_TYPE (BloodTypeID, BloodTypeName) VALUES
+        (1, 'A+'), (2, 'A-'), (3, 'B+'), (4, 'B-'),
+        (5, 'O+'), (6, 'O-'), (7, 'AB+'), (8, 'AB-')");
+
+    $stmt = $pdo->prepare("SELECT UserID FROM USERS WHERE Username = ? LIMIT 1");
+    $stmt->execute(['admin']);
+    $adminUser = $stmt->fetch();
+
+    if (!$adminUser) {
+        $hash = password_hash('Admin@123', PASSWORD_DEFAULT);
+        $insUser = $pdo->prepare("INSERT INTO USERS (Username, Password, ROLES_RoleID, active) VALUES (?, ?, 1, 1)");
+        $insUser->execute(['admin', $hash]);
+        $userId = (int)$pdo->lastInsertId();
+
+        $insAdmin = $pdo->prepare("INSERT INTO CIT_Health_OFF_ADM (FIR_name, LST_name, USERS_UserID) VALUES ('System', 'Administrator', ?)");
+        $insAdmin->execute([$userId]);
+    }
+
+    $initialized = true;
+}

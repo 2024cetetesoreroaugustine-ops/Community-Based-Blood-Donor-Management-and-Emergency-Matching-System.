@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community-Based Blood Donor Management & Emergency Matching System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- 1. LOGIN SCREEN -->
+    <section id="loginViewSection" class="login-container">
+        <div class="login-card">
+
+            <div class="login-brand">
+                <div class="login-brand-top">
+                    <span class="logo-icon">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12 2.5c3.2 4.4 7 9.2 7 13.2a7 7 0 1 1-14 0c0-4 3.8-8.8 7-13.2Z"/>
+                        </svg>
+                    </span>
+                    <span class="login-brand-kicker">PulseLink</span>
+                    <h2>Community-Based Blood Donor Management &amp; Emergency Matching System</h2>
+                    <p>A community coordination platform for barangays, hospitals, RHUs, and local health offices &mdash; matching volunteer donors by blood type, availability, and location during emergencies.</p>
+                </div>
+
+                <ul class="login-brand-points">
+                    <li>
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M9 12.5 11 14.5 15.5 10"/>
+                            <circle cx="12" cy="12" r="9.5"/>
+                        </svg>
+                        Verified volunteer donor registry per barangay
+                    </li>
+                    <li>
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="9"/>
+                            <circle cx="12" cy="12" r="5"/>
+                            <circle cx="12" cy="12" r="1"/>
+                        </svg>
+                        Automated matching by blood type, availability &amp; location
+                    </li>
+                    <li>
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <rect x="4" y="5" width="16" height="16" rx="2"/>
+                            <path d="M4 9.5h16M8 3v3.5M16 3v3.5"/>
+                        </svg>
+                        Faster donor coordination during emergencies
+                    </li>
+                </ul>
+
+                <div class="login-brand-foot">
+                    Supporting City Health Office, hospitals, RHUs &amp; barangay health centers
+                    &middot; General Santos City, South Cotabato
+                </div>
+            </div>
+
+            <!-- RIGHT: LOGIN FORM PANEL -->
+            <div class="login-form-panel">
+                <div class="login-form-header">
+                    <h3>Log in to your account</h3>
+                    <p>Emergency Blood Matching &amp; Verification</p>
+                </div>
+
+                <form id="initialLoginForm" novalidate>
+
+                    <div class="form-group" id="loginUsernameGroup">
+                        <label for="initialLoginUsername">Username</label>
+                        <div class="input-with-icon">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <circle cx="12" cy="8" r="4"/>
+                                <path d="M4.5 20c1-4.2 3.8-6.5 7.5-6.5s6.5 2.3 7.5 6.5"/>
+                            </svg>
+                            <input type="text" id="initialLoginUsername"
+                                class="form-control"
+                                placeholder="Enter your username"
+                                autocomplete="username">
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="loginPasswordGroup">
+                        <label for="initialLoginPassword">Password</label>
+                        <div class="input-with-icon">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <rect x="5" y="11" width="14" height="9" rx="2"/>
+                                <path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>
+                            </svg>
+                            <input type="password" id="initialLoginPassword"
+                                class="form-control"
+                                placeholder="••••••••"
+                                autocomplete="current-password">
+                            <button type="button" id="toggleLoginPass"
+                                title="Show/hide password"
+                                style="position:absolute;right:10px;background:none;
+                                       border:none;cursor:pointer;
+                                       color:var(--ink-faint);padding:0;
+                                       display:flex;align-items:center;">
+                                <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Login error box (inline, no alert popup) -->
+                    <div id="loginError" class="notice notice-danger"
+                         style="display:none; margin-bottom:12px; font-size:0.84rem;">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12 3.5 2 20.5h20L12 3.5Z"/>
+                            <path d="M12 10v4.2M12 17.2h.01"/>
+                        </svg>
+                        <span id="loginErrorMsg"></span>
+                    </div>
+
+                    <button type="submit" class="btn-submit" id="btnLoginSubmit">
+                        <svg class="icon" viewBox="0 0 24 24"
+                             width="16" height="16" stroke="white">
+                            <path d="M9 6.5 15 12l-6 5.5"/>
+                        </svg>
+                        Log In
+                    </button>
+                </form>
+
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 2. MAIN DASHBOARD LAYOUT -->
+    <main id="mainDashboardView" style="display:none;">
+
+        <header class="app-header">
+            <div class="logo-container">
+                <span class="logo-icon">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12 2.5c3.2 4.4 7 9.2 7 13.2a7 7 0 1 1-14 0c0-4 3.8-8.8 7-13.2Z"/>
+                    </svg>
+                </span>
+                <div>
+                    <h1>PulseLink</h1>
+                    <p>Community Blood Donor &amp; Emergency Matching Engine</p>
+                </div>
+            </div>
+            <div class="user-control-panel">
+                <span id="roleBadge" class="badge badge-role">Guest</span>
+                <span id="welcomeUserMsg"></span>
+                <button class="btn-auth btn-danger" id="btnLogoutNav">
+                    <svg class="icon" viewBox="0 0 24 24" width="15" height="15">
+                        <path d="M15 17.5 20 12l-5-5.5M20 12H9M9 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H9"/>
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </header>
+
+        <div class="app-layout">
+
+            <aside class="sidebar-nav">
+                <div>System Modules</div>
+                <ul id="sidebarMenu" class="nav-menu"></ul>
+            </aside>
+
+            <section class="main-content">
+
+                <!-- MODULE: HOME -->
+                <div id="viewHome" class="module-view">
+                    <div class="card">
+                        <div class="welcome-banner">
+                            <h2 id="welcomeBannerTitle">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M3 11.5 12 4l9 7.5M5.5 10v9A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5v-9"/>
+                                </svg>
+                                Welcome to Dashboard
+                            </h2>
+                            <div class="stat-grid">
+                                <div class="stat-tile">
+                                    <svg class="icon stat-icon" viewBox="0 0 24 24">
+                                        <path d="M12 2.5c3.2 4.4 7 9.2 7 13.2a7 7 0 1 1-14 0c0-4 3.8-8.8 7-13.2Z"/>
+                                    </svg>
+                                    <div class="stat-value">A+ &ndash; O&minus;</div>
+                                    <div class="stat-label">8 blood types tracked</div>
+                                </div>
+                                <div class="stat-tile">
+                                    <svg class="icon stat-icon" viewBox="0 0 24 24">
+                                        <path d="M9 12.5 11 14.5 15.5 10M12 3l7 3v6c0 4.5-3 8.2-7 9-4-.8-7-4.5-7-9V6l7-3Z"/>
+                                    </svg>
+                                    <div class="stat-value">Verify &amp; Match</div>
+                                    <div class="stat-label">CHO-approved donor registry</div>
+                                </div>
+                                <div class="stat-tile">
+                                    <svg class="icon stat-icon" viewBox="0 0 24 24">
+                                        <path d="M4.5 12.5 8 12.5 9.5 9.5 11 15.5 12.5 12.5 15 12.5"/>
+                                        <path d="M19.5 12.5H16"/>
+                                        <circle cx="12" cy="12" r="9.5"/>
+                                    </svg>
+                                    <div class="stat-value">Live Matching</div>
+                                    <div class="stat-label">Emergency requests → qualified donors</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODULE: DONOR RECORDS & VERIFICATION -->
+                <div id="viewDonors" class="module-view" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M8 2.5h8a1 1 0 0 1 1 1V5H7V3.5a1 1 0 0 1 1-1Z"/>
+                                    <rect x="5" y="5" width="14" height="16.5" rx="2"/>
+                                    <path d="M9 11h6M9 14.5h6M9 18h4"/>
+                                </svg>
+                                Donor Records &amp; Verification Status
+                            </h2>
+                            <button class="btn-toolbar btn-success"
+                                id="btnBhwRegisterDonor" style="display:none;">
+                                <svg class="icon" viewBox="0 0 24 24" width="15" height="15">
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                                Assist Donor Registration
+                            </button>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Donor ID</th>
+                                        <th>First Name</th>
+                                        <th>Last Name</th>
+                                        <th>Sex</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Address</th>
+                                        <th>Blood Type</th>
+                                        <th>Verification Status</th>
+                                        <th>Availability</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="donorTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODULE: EMERGENCY BLOOD REQUESTS -->
+                <div id="viewRequests" class="module-view" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M12 3.5 2 20.5h20L12 3.5Z"/>
+                                    <path d="M12 10v4.2M12 17.2h.01"/>
+                                </svg>
+                                Emergency Blood Requests
+                            </h2>
+                            <button class="btn-toolbar btn-alert"
+                                id="btnReqModuleAdd" style="display:none;">
+                                <svg class="icon" viewBox="0 0 24 24" width="15" height="15">
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                                Submit Emergency Request
+                            </button>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Request ID</th>
+                                        <th>Patient Name</th>
+                                        <th>Hospital ID</th>
+                                        <th>Blood Type Needed</th>
+                                        <th>Hospital Barangay</th>
+                                        <th>Quantity (Bags)</th>
+                                        <th>Request Date</th>
+                                        <th>Request Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="requestTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Pending Donation Confirmations (Hospital Staff only) -->
+                    <div class="card" id="donationConfirmCard" style="display:none;">
+                        <div class="card-header">
+                            <h2>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M9 12.5 11 14.5 15.5 10"/>
+                                    <circle cx="12" cy="12" r="9.5"/>
+                                </svg>
+                                Pending Donation Confirmations
+                            </h2>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Donation ID</th>
+                                        <th>Donor</th>
+                                        <th>Blood Type</th>
+                                        <th>Request ID</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pendingDonationsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODULE: MATCH QUALIFIED DONOR ENGINE -->
+                <div id="viewMatchedDonors" class="module-view" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <circle cx="12" cy="12" r="5"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                </svg>
+                                Qualified Matched Donors Engine
+                            </h2>
+                            <div id="matchedFilterTag"
+                                 style="font-weight:600;color:var(--teal);font-size:0.85rem;">
+                            </div>
+                            <label class="filter-toggle">
+                                <input type="checkbox" id="filterSameBarangay">
+                                Same barangay only
+                            </label>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Donor ID</th>
+                                        <th>Full Name</th>
+                                        <th>Sex</th>
+                                        <th>Blood Type</th>
+                                        <th>Location</th>
+                                        <th>Phone</th>
+                                        <th>Availability</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="matchedDonorTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODULE: BLOOD DRIVES -->
+                <div id="viewDrives" class="module-view" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <rect x="4" y="5" width="16" height="16" rx="2"/>
+                                    <path d="M4 9.5h16M8 3v3.5M16 3v3.5"/>
+                                </svg>
+                                Community Blood Drives
+                            </h2>
+                            <button class="btn-toolbar"
+                                id="btnDriveModuleAdd" style="display:none;">
+                                <svg class="icon" viewBox="0 0 24 24" width="15" height="15">
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                                Schedule Blood Drive
+                            </button>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Drive ID</th>
+                                        <th>Event Name</th>
+                                        <th>Location</th>
+                                        <th>Schedule Date</th>
+                                        <th>Barangay</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="driveTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODULE: SYSTEM USER ACCOUNTS -->
+                <div id="viewUsers" class="module-view" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <circle cx="9" cy="8" r="3.2"/>
+                                    <path d="M3.5 20c.7-3.4 3-5.3 5.5-5.3s4.8 1.9 5.5 5.3"/>
+                                    <circle cx="17" cy="8.5" r="2.6"/>
+                                    <path d="M15.5 14.9c2.2.3 3.9 2.1 4.5 5.1"/>
+                                </svg>
+                                Manage System User Accounts
+                            </h2>
+                            <button class="btn-toolbar btn-success"
+                                id="btnAdminCreateAccount">
+                                <svg class="icon" viewBox="0 0 24 24" width="15" height="15">
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                                Create Account
+                            </button>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Username</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userAccountTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODULE: REPORTS GENERATION -->
+                <div id="viewReports" class="module-view" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M4 20V10M10 20V4M16 20v-7M20 20H4"/>
+                                </svg>
+                                Generate System Reports
+                            </h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="report-btn-row">
+                                <button onclick="generateReport('Donor')" class="report-btn">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M8 2.5h8a1 1 0 0 1 1 1V5H7V3.5a1 1 0 0 1 1-1Z"/>
+                                        <rect x="5" y="5" width="14" height="16.5" rx="2"/>
+                                        <path d="M9 11h6M9 14.5h6M9 18h4"/>
+                                    </svg>
+                                    Generate Donor Report
+                                </button>
+                                <button onclick="generateReport('Emergency')" class="report-btn">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M12 3.5 2 20.5h20L12 3.5Z"/>
+                                        <path d="M12 10v4.2M12 17.2h.01"/>
+                                    </svg>
+                                    Generate Emergency Report
+                                </button>
+                                <button onclick="generateReport('Donation')" class="report-btn">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M12 2.5c3.2 4.4 7 9.2 7 13.2a7 7 0 1 1-14 0c0-4 3.8-8.8 7-13.2Z"/>
+                                    </svg>
+                                    Generate Donation Report
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="reportOutputContainer" class="report-output">
+                                <p style="color:var(--ink-faint);">
+                                    Select a report above to generate system logs.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODULE: MANAGE NOTIFICATIONS (CHO Admin) -->
+                <div id="viewManageNotifications" class="module-view" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M18 8a6 6 0 0 0-12 0c0 5.5-2 7-2 7h16s-2-1.5-2-7"/>
+                                    <path d="M10.5 19a1.7 1.7 0 0 0 3 0"/>
+                                </svg>
+                                Manage System Notifications
+                            </h2>
+                        </div>
+                        <div class="card-body">
+                            <div id="adminNotificationsContainer"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODULE: DONOR PORTAL & NOTIFICATIONS -->
+                <div id="viewMyProfile" class="module-view" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M12 3.5 2 20.5h20L12 3.5Z"/>
+                                    <path d="M12 10v4.2M12 17.2h.01"/>
+                                </svg>
+                                Emergency Blood Notifications
+                            </h2>
+                        </div>
+                        <div class="card-body">
+                            <div id="donorNotificationsContainer">
+                                <p style="color:var(--ink-faint);">
+                                    No pending emergency blood requests.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="8" r="4"/>
+                                    <path d="M4.5 20c1-4.2 3.8-6.5 7.5-6.5s6.5 2.3 7.5 6.5"/>
+                                </svg>
+                                Personal Donor Profile &amp; Availability
+                            </h2>
+                            <button class="btn-icon-sm btn-edit" id="btnEditDonorProfile">
+                                <svg class="icon" viewBox="0 0 24 24"
+                                     width="13" height="13" stroke="white">
+                                    <path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/>
+                                </svg>
+                                Update Personal Details
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="myProfileContent"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MODALS
+    ═══════════════════════════════════════════════════════════ -->
+
+    <!-- USER REGISTRATION MODAL -->
+    <div id="staffRegisterModal" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close-btn" data-close="staffRegisterModal">&times;</span>
+            <h2>System Account Registration</h2>
+            <form id="formStaffRegister" novalidate>
+
+                <div class="form-group">
+                    <label for="staffRegRole">Select Account Role:</label>
+                    <select id="staffRegRole" class="form-control">
+                        <option value="2">Hospital Staff</option>
+                        <option value="1">City Health Office Admin</option>
+                        <option value="3">Barangay Health Worker</option>
+                        <option value="4">Volunteer Blood Donor</option>
+                    </select>
+                </div>
+
+                <!-- CHO ADMIN FIELDS -->
+                <div id="choFieldsGroup" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>First Name: <span style="color:var(--garnet);">*</span></label>
+                            <input type="text" id="choFirName" class="form-control"
+                                placeholder="e.g. Maria"
+                                autocomplete="off">
+                            <small class="error-message"
+                                   id="choFirNameError" style="display:none;"></small>
+                        </div>
+                        <div class="form-group col">
+                            <label>Last Name: <span style="color:var(--garnet);">*</span></label>
+                            <input type="text" id="choLstName" class="form-control"
+                                placeholder="e.g. Santos"
+                                autocomplete="off">
+                            <small class="error-message"
+                                   id="choLstNameError" style="display:none;"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HOSPITAL STAFF FIELDS -->
+                <div id="hospitalFieldsGroup">
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>Hospital Name: <span style="color:var(--garnet);">*</span></label>
+                            <input type="text" id="hospName" class="form-control"
+                                placeholder="e.g. General Santos City Hospital">
+                        </div>
+                        <div class="form-group col">
+                            <label>Contact Number: <span style="color:var(--garnet);">*</span></label>
+                            <input type="text" id="hospCttNumber" class="form-control"
+                                placeholder="+63XXXXXXXXXX or 09XXXXXXXXX"
+                                maxlength="13">
+                            <small class="error-message"
+                                   id="hospCttError" style="display:none;"></small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>Address / Street:</label>
+                            <input type="text" id="hospAdd" class="form-control"
+                                placeholder="Street address">
+                        </div>
+                        <div class="form-group col">
+                            <label>Barangay:</label>
+                            <select id="hospBarangayId" class="form-control">
+                                <option value="1">Apopong</option>
+                                <option value="2">Baluan</option>
+                                <option value="3">Bula</option>
+                                <option value="4">Calumpang</option>
+                                <option value="5">City Heights</option>
+                                <option value="6">Labangal</option>
+                                <option value="7">Lagao</option>
+                                <option value="8">San Isidro</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BHW FIELDS -->
+                <div id="bhwFieldsGroup" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>First Name: <span style="color:var(--garnet);">*</span></label>
+                            <input type="text" id="bhwFirName" class="form-control"
+                                placeholder="e.g. Juan"
+                                autocomplete="off">
+                            <small class="error-message"
+                                   id="bhwFirNameError" style="display:none;"></small>
+                        </div>
+                        <div class="form-group col">
+                            <label>Last Name: <span style="color:var(--garnet);">*</span></label>
+                            <input type="text" id="bhwLstName" class="form-control"
+                                placeholder="e.g. Dela Cruz"
+                                autocomplete="off">
+                            <small class="error-message"
+                                   id="bhwLstNameError" style="display:none;"></small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>Contact Number: <span style="color:var(--garnet);">*</span></label>
+                            <input type="text" id="bhwCttNumber" class="form-control"
+                                placeholder="+63XXXXXXXXXX or 09XXXXXXXXX"
+                                maxlength="13">
+                            <small class="error-message"
+                                   id="bhwCttError" style="display:none;"></small>
+                        </div>
+                        <div class="form-group col">
+                            <label>Assigned Barangay:</label>
+                            <select id="bhwBarangayId" class="form-control">
+                                <option value="1">Apopong</option>
+                                <option value="2">Baluan</option>
+                                <option value="3">Bula</option>
+                                <option value="4">Calumpang</option>
+                                <option value="5">City Heights</option>
+                                <option value="6">Labangal</option>
+                                <option value="7">Lagao</option>
+                                <option value="8">San Isidro</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DONOR SELF REGISTRATION FIELDS -->
+                <div id="donorFieldsGroup" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>First Name: <span style="color:var(--garnet);">*</span></label>
+                            <input type="text" id="selfDonorFirName" class="form-control"
+                                placeholder="e.g. Ana"
+                                autocomplete="off">
+                            <small class="error-message"
+                                   id="selfFirError" style="display:none;"></small>
+                        </div>
+                        <div class="form-group col">
+                            <label>Middle Name:
+                                <span style="color:var(--ink-faint);font-weight:400;">
+                                    (optional)</span></label>
+                            <input type="text" id="selfDonorMidName" class="form-control"
+                                placeholder="e.g. Reyes"
+                                autocomplete="off">
+                        </div>
+                        <div class="form-group col">
+                            <label>Last Name: <span style="color:var(--garnet);">*</span></label>
+                            <input type="text" id="selfDonorLstName" class="form-control"
+                                placeholder="e.g. Garcia"
+                                autocomplete="off">
+                            <small class="error-message"
+                                   id="selfLstError" style="display:none;"></small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>Sex:</label>
+                            <select id="selfDonorSex" class="form-control">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                        <div class="form-group col">
+                            <label>Birth Date:
+                                <span style="color:var(--ink-faint);font-size:0.75rem;">
+                                    (must be 17+)</span></label>
+                            <input type="date" id="selfDonorBth" class="form-control">
+                            <small class="error-message"
+                                   id="selfBthError" style="display:none;"></small>
+                        </div>
+                        <div class="form-group col">
+                            <label>Blood Type:</label>
+                            <select id="selfDonorBloodType" class="form-control">
+                                <option value="1">A+</option>
+                                <option value="2">A-</option>
+                                <option value="3">B+</option>
+                                <option value="4">B-</option>
+                                <option value="5">O+</option>
+                                <option value="6">O-</option>
+                                <option value="7">AB+</option>
+                                <option value="8">AB-</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>Phone Number: <span style="color:var(--garnet);">*</span></label>
+                            <input type="text" id="selfDonorPhone" class="form-control"
+                                placeholder="+63XXXXXXXXXX or 09XXXXXXXXX"
+                                maxlength="13">
+                            <small class="error-message"
+                                   id="selfPhoneError" style="display:none;"></small>
+                        </div>
+                        <div class="form-group col">
+                            <label>Email:
+                                <span style="color:var(--ink-faint);font-size:0.75rem;">
+                                    (@gmail.com only)</span></label>
+                            <input type="text" id="selfDonorEmail" class="form-control"
+                                placeholder="example@gmail.com">
+                            <small class="error-message"
+                                   id="selfEmailError" style="display:none;"></small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>Address:</label>
+                            <input type="text" id="selfDonorAdd" class="form-control"
+                                placeholder="Street / Sitio">
+                        </div>
+                        <div class="form-group col">
+                            <label>Barangay:</label>
+                            <select id="selfDonorBarangay" class="form-control">
+                                <option value="1">Apopong</option>
+                                <option value="2">Baluan</option>
+                                <option value="3">Bula</option>
+                                <option value="4">Calumpang</option>
+                                <option value="5">City Heights</option>
+                                <option value="6">Labangal</option>
+                                <option value="7">Lagao</option>
+                                <option value="8">San Isidro</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LOGIN CREDENTIALS -->
+                <hr>
+                <h4>Login Credentials</h4>
+
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>Username: <span style="color:var(--garnet);">*</span></label>
+                        <input type="text" id="staffRegUser" class="form-control"
+                            placeholder="3–30 chars: letters, numbers, underscore"
+                            minlength="3" maxlength="30"
+                            autocomplete="off">
+                        <small class="error-message"
+                               id="regUsernameError" style="display:none;"></small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>Password: <span style="color:var(--garnet);">*</span></label>
+                        <div class="input-with-icon">
+                            <input type="password" id="staffRegPass" class="form-control"
+                                minlength="8"
+                                placeholder="Min 8 chars, A-Z, a-z, 0-9, special char"
+                                autocomplete="new-password">
+                            <button type="button" class="toggle-pass-btn"
+                                data-target="staffRegPass"
+                                title="Show/hide password"
+                                style="position:absolute;right:10px;background:none;
+                                       border:none;cursor:pointer;
+                                       color:var(--ink-faint);padding:0;
+                                       display:flex;align-items:center;">
+                                <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <!-- Password strength bar -->
+                        <div id="passStrengthBar"
+                             style="margin-top:6px;height:4px;border-radius:4px;
+                                    background:var(--border);overflow:hidden;">
+                            <div id="passStrengthFill"
+                                 style="height:100%;width:0%;
+                                        transition:width 0.3s ease,background 0.3s ease;">
+                            </div>
+                        </div>
+                        <small id="passStrengthLabel"
+                               style="font-size:0.72rem;color:var(--ink-faint);
+                                      margin-top:2px;display:block;"></small>
+                        <small class="error-message"
+                               id="regPassError" style="display:none;"></small>
+                    </div>
+                    <div class="form-group col">
+                        <label>Confirm Password: <span style="color:var(--garnet);">*</span></label>
+                        <div class="input-with-icon">
+                            <input type="password" id="staffRegPassConfirm"
+                                class="form-control"
+                                placeholder="Re-enter your password"
+                                autocomplete="new-password">
+                            <button type="button" class="toggle-pass-btn"
+                                data-target="staffRegPassConfirm"
+                                title="Show/hide password"
+                                style="position:absolute;right:10px;background:none;
+                                       border:none;cursor:pointer;
+                                       color:var(--ink-faint);padding:0;
+                                       display:flex;align-items:center;">
+                                <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <small class="error-message"
+                               id="regPassConfirmError" style="display:none;"></small>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit">Register Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- BHW ASSIST DONOR MODAL -->
+    <div id="bhwDonorRegisterModal" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close-btn" data-close="bhwDonorRegisterModal">&times;</span>
+            <h2>BHW Assist: Register Volunteer Blood Donor</h2>
+            <form id="formBhwRegisterDonor" novalidate>
+
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>First Name: <span style="color:var(--garnet);">*</span></label>
+                        <input type="text" id="regFirstName" class="form-control"
+                            placeholder="e.g. Juan"
+                            autocomplete="off">
+                    </div>
+                    <div class="form-group col">
+                        <label>Middle Name:
+                            <span style="color:var(--ink-faint);font-weight:400;">
+                                (optional)</span></label>
+                        <input type="text" id="regMiddleName" class="form-control"
+                            placeholder="e.g. Reyes"
+                            autocomplete="off">
+                    </div>
+                    <div class="form-group col">
+                        <label>Last Name: <span style="color:var(--garnet);">*</span></label>
+                        <input type="text" id="regLastName" class="form-control"
+                            placeholder="e.g. Dela Cruz"
+                            autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>Sex:</label>
+                        <select id="regSex" class="form-control">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                    <div class="form-group col">
+                        <label>Birth Date:
+                            <span style="color:var(--ink-faint);font-size:0.75rem;">
+                                (must be 17+)</span></label>
+                        <input type="date" id="regBirthDate" class="form-control">
+                    </div>
+                    <div class="form-group col">
+                        <label>Blood Type:</label>
+                        <select id="regBloodType" class="form-control">
+                            <option value="1">A+</option>
+                            <option value="2">A-</option>
+                            <option value="3">B+</option>
+                            <option value="4">B-</option>
+                            <option value="5">O+</option>
+                            <option value="6">O-</option>
+                            <option value="7">AB+</option>
+                            <option value="8">AB-</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>Phone Number: <span style="color:var(--garnet);">*</span></label>
+                        <input type="text" id="regPhone" class="form-control"
+                            placeholder="+63XXXXXXXXXX or 09XXXXXXXXX"
+                            maxlength="13">
+                    </div>
+                    <div class="form-group col">
+                        <label>Email:
+                            <span style="color:var(--ink-faint);font-size:0.75rem;">
+                                (@gmail.com only)</span></label>
+                        <input type="text" id="regEmail" class="form-control"
+                            placeholder="example@gmail.com">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>Address:</label>
+                        <input type="text" id="regAdd" class="form-control"
+                            placeholder="Street / Sitio">
+                    </div>
+                    <div class="form-group col">
+                        <label>Barangay:</label>
+                        <select id="regBarangay" class="form-control">
+                            <option value="1">Apopong</option>
+                            <option value="2">Baluan</option>
+                            <option value="3">Bula</option>
+                            <option value="4">Calumpang</option>
+                            <option value="5">City Heights</option>
+                            <option value="6">Labangal</option>
+                            <option value="7">Lagao</option>
+                            <option value="8">San Isidro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr>
+                <h4>Donor Account Credentials</h4>
+
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>Username: <span style="color:var(--garnet);">*</span></label>
+                        <input type="text" id="regDonorUsername" class="form-control"
+                            placeholder="3–30 chars: letters, numbers, underscore"
+                            minlength="3" maxlength="30"
+                            autocomplete="off">
+                    </div>
+                    <div class="form-group col">
+                        <label>Password: <span style="color:var(--garnet);">*</span></label>
+                        <div class="input-with-icon">
+                            <input type="password" id="regDonorPassword"
+                                class="form-control" minlength="8"
+                                placeholder="Min 8 chars, A-Z, a-z, 0-9, special char"
+                                autocomplete="new-password">
+                            <button type="button" class="toggle-pass-btn"
+                                data-target="regDonorPassword"
+                                title="Show/hide password"
+                                style="position:absolute;right:10px;background:none;
+                                       border:none;cursor:pointer;
+                                       color:var(--ink-faint);padding:0;
+                                       display:flex;align-items:center;">
+                                <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit">Submit Donor Registration</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- EMERGENCY REQUEST MODAL -->
+    <div id="requestModal" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close-btn" data-close="requestModal">&times;</span>
+            <h2>Submit Emergency Blood Request</h2>
+            <form id="formEmergencyRequest" novalidate>
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>Patient Name: <span style="color:var(--garnet);">*</span></label>
+                        <input type="text" id="reqPatient" class="form-control"
+                            placeholder="Full name of patient">
+                    </div>
+                    <div class="form-group col">
+                        <label>Required Blood Type:</label>
+                        <select id="reqBloodType" class="form-control">
+                            <option value="1">A+</option>
+                            <option value="2">A-</option>
+                            <option value="3">B+</option>
+                            <option value="4">B-</option>
+                            <option value="5">O+</option>
+                            <option value="6">O-</option>
+                            <option value="7">AB+</option>
+                            <option value="8">AB-</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>Quantity (Bags Needed): <span style="color:var(--garnet);">*</span></label>
+                        <input type="number" id="reqQty" class="form-control"
+                            min="1" max="100" placeholder="e.g. 2">
+                    </div>
+                    <div class="form-group col">
+                        <label>Request Date: <span style="color:var(--garnet);">*</span></label>
+                        <input type="date" id="reqDate" class="form-control">
+                    </div>
+                </div>
+                <p class="text-muted" style="margin-top:4px;font-size:0.8rem;">
+                    Matching donor location will be based on your hospital's registered barangay.
+                </p>
+                <button type="submit" class="btn-submit">Search Matching Donors</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- BLOOD DRIVE MODAL -->
+    <div id="driveModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" data-close="driveModal">&times;</span>
+            <h2>Schedule Community Blood Drive</h2>
+            <form id="formBloodDrive" novalidate>
+                <div class="form-group">
+                    <label>Event Name: <span style="color:var(--garnet);">*</span></label>
+                    <input type="text" id="driveEvent" class="form-control"
+                        placeholder="e.g. Barangay Apopong Blood Drive">
+                </div>
+                <div class="form-group">
+                    <label>Location Venue: <span style="color:var(--garnet);">*</span></label>
+                    <input type="text" id="driveVenue" class="form-control"
+                        placeholder="e.g. Barangay Hall, Apopong">
+                </div>
+                <div class="form-group">
+                    <label>Schedule Date: <span style="color:var(--garnet);">*</span></label>
+                    <input type="date" id="driveDate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Target Barangay:</label>
+                    <select id="driveBarangay" class="form-control">
+                        <option value="1">Apopong</option>
+                        <option value="2">Baluan</option>
+                        <option value="3">Bula</option>
+                        <option value="4">Calumpang</option>
+                        <option value="5">City Heights</option>
+                        <option value="6">Labangal</option>
+                        <option value="7">Lagao</option>
+                        <option value="8">San Isidro</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit">Save Event</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- EDIT USER MODAL -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" data-close="editUserModal">&times;</span>
+            <h2>Edit User Account</h2>
+            <form id="formEditUser" novalidate>
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label>Username: <span style="color:var(--garnet);">*</span></label>
+                    <input type="text" id="editUserUsername" class="form-control"
+                        placeholder="3–30 chars: letters, numbers, underscore"
+                        minlength="3" maxlength="30"
+                        autocomplete="off">
+                </div>
+                <button type="submit" class="btn-submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- EDIT BLOOD DRIVE MODAL -->
+    <div id="editDriveModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" data-close="editDriveModal">&times;</span>
+            <h2>Update Blood Drive</h2>
+            <form id="formEditDrive" novalidate>
+                <input type="hidden" id="editDriveId">
+                <div class="form-group">
+                    <label>Event Name: <span style="color:var(--garnet);">*</span></label>
+                    <input type="text" id="editDriveEvent" class="form-control"
+                        placeholder="Event name">
+                </div>
+                <div class="form-group">
+                    <label>Location Venue: <span style="color:var(--garnet);">*</span></label>
+                    <input type="text" id="editDriveVenue" class="form-control"
+                        placeholder="Venue / address">
+                </div>
+                <div class="form-group">
+                    <label>Schedule Date:</label>
+                    <input type="date" id="editDriveDate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Target Barangay:</label>
+                    <select id="editDriveBarangay" class="form-control">
+                        <option value="1">Apopong</option>
+                        <option value="2">Baluan</option>
+                        <option value="3">Bula</option>
+                        <option value="4">Calumpang</option>
+                        <option value="5">City Heights</option>
+                        <option value="6">Labangal</option>
+                        <option value="7">Lagao</option>
+                        <option value="8">San Isidro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status:</label>
+                    <select id="editDriveStatus" class="form-control">
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="Ongoing">Ongoing</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- DONOR PROFILE UPDATE MODAL -->
+    <div id="editDonorProfileModal" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close-btn" data-close="editDonorProfileModal">&times;</span>
+            <h2>Update Personal Details</h2>
+            <form id="formEditDonorProfile" novalidate>
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>First Name: <span style="color:var(--garnet);">*</span></label>
+                        <input type="text" id="editProfileFirName" class="form-control"
+                            placeholder="First name"
+                            autocomplete="off">
+                    </div>
+                    <div class="form-group col">
+                        <label>Middle Name:
+                            <span style="color:var(--ink-faint);font-weight:400;">
+                                (optional)</span></label>
+                        <input type="text" id="editProfileMidName" class="form-control"
+                            placeholder="Middle name"
+                            autocomplete="off">
+                    </div>
+                    <div class="form-group col">
+                        <label>Last Name: <span style="color:var(--garnet);">*</span></label>
+                        <input type="text" id="editProfileLstName" class="form-control"
+                            placeholder="Last name"
+                            autocomplete="off">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>Phone Number: <span style="color:var(--garnet);">*</span></label>
+                        <input type="text" id="editProfilePhone" class="form-control"
+                            placeholder="+63XXXXXXXXXX or 09XXXXXXXXX"
+                            maxlength="13">
+                    </div>
+                    <div class="form-group col">
+                        <label>Email:
+                            <span style="color:var(--ink-faint);font-size:0.75rem;">
+                                (@gmail.com only)</span></label>
+                        <input type="text" id="editProfileEmail" class="form-control"
+                            placeholder="example@gmail.com">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label>Address:</label>
+                        <input type="text" id="editProfileAdd" class="form-control"
+                            placeholder="Street / Sitio">
+                    </div>
+                    <div class="form-group col">
+                        <label>Barangay:</label>
+                        <select id="editProfileBarangay" class="form-control">
+                            <option value="1">Apopong</option>
+                            <option value="2">Baluan</option>
+                            <option value="3">Bula</option>
+                            <option value="4">Calumpang</option>
+                            <option value="5">City Heights</option>
+                            <option value="6">Labangal</option>
+                            <option value="7">Lagao</option>
+                            <option value="8">San Isidro</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit">Save Personal Details</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script src="js/system-patch.js"></script>
+</body>
+</html>
