@@ -21,6 +21,8 @@ const session = {
     latestRequestBarangayId:  null,
     latestRequestREQid:       null
 };
+window.session = session;
+
 
 // ── Lookup Maps ───────────────────────────────────────────────
 const bloodTypeMap = {
@@ -83,6 +85,12 @@ async function apiPut(endpoint, data) {
         return { success: false, message: 'Network error. Check your connection.', data: null };
     }
 }
+
+window.apiGet = apiGet;
+window.apiPost = apiPost;
+window.apiPut = apiPut;
+
+
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -259,13 +267,30 @@ function validateUsernameField(input) {
         showValidationError(input, 'Username is required.');
         return false;
     }
-    if (!/^[a-zA-Z0-9_]{3,30}$/.test(val)) {
-        showValidationError(input,
-            'Username must be 3–30 characters: letters, numbers, and underscores only.');
-        return false;
-    }
+    if (!/^[A-Z][a-zA-Z0-9_]{2,29}$/.test(val)) {
+    showValidationError(input,
+        'Username must be 3-30 characters, start with uppercase letter, and use letters, numbers, underscore only.');
+    return false;
+}
     showValidationSuccess(input);
     return true;
+}
+
+function normalizeUsernameInput(input) {
+    if (!input) return;
+
+    // Keep only letters, numbers, underscore
+    let v = String(input.value || '').replace(/[^a-zA-Z0-9_]/g, '');
+
+    // Max 30 chars
+    v = v.slice(0, 30);
+
+    // Auto uppercase first character if present
+    if (v.length > 0) {
+        v = v.charAt(0).toUpperCase() + v.slice(1);
+    }
+
+    input.value = v;
 }
 
 // Age: must be at least 17
@@ -401,11 +426,13 @@ function initValidationListeners() {
     }
 
     // Username validation on blur
-    ['staffRegUser','regDonorUsername','editUserUsername'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('blur', () => validateUsernameField(el));
-    });
+['staffRegUser','regDonorUsername','editUserUsername','editProfileUsername'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
 
+    el.addEventListener('input', () => normalizeUsernameInput(el));
+    el.addEventListener('blur', () => validateUsernameField(el));
+});
     // Birthdate age check on blur
     ['selfDonorBth','regBirthDate'].forEach(id => {
         const el = document.getElementById(id);
@@ -1223,29 +1250,37 @@ async function renderRequestsTable() {
         const nr = await apiGet(`notifications.php?user_id=${session.UserID}`);
         let hospNotifHTML = '';
         if (nr.success && nr.data && nr.data.length) {
-            hospNotifHTML = `<div style="margin-bottom:20px;display:flex;flex-direction:column;gap:8px;">
-                ${nr.data.map(n => {
-                    const isNoMatch = n.Message.includes('No qualified');
-                    return isNoMatch
-                        ? `<div class="notice notice-warning">
-                               <svg class="icon" viewBox="0 0 24 24">
-                                   <path d="M12 3.5 2 20.5h20L12 3.5Z"/>
-                                   <path d="M12 10v4.2M12 17.2h.01"/></svg>
-                               <div><strong>NO MATCH ALERT:</strong>
-                               ${escapeHtml(n.Message)}
-                               <small>Date: ${n.SentDate}</small></div>
-                           </div>`
-                        : `<div class="notice notice-success">
-                               <svg class="icon" viewBox="0 0 24 24">
-                                   <path d="M4.5 12.5 9.5 17.5 19.5 6.5"/></svg>
-                               <div><strong>MATCH CONFIRMED:</strong>
-                               ${escapeHtml(n.Message)}
-                               <small>Date: ${n.SentDate}</small></div>
-                           </div>`;
-                }).join('')}
-            </div>`;
-        }
-
+    hospNotifHTML = `
+        <div style="margin-bottom:10px;display:flex;justify-content:flex-end;">
+            <button onclick="clearHospitalNotifications()"
+                class="btn-icon-sm btn-decline">
+                <svg class="icon" viewBox="0 0 24 24" width="13" height="13" stroke="white">
+                    <path d="M6 6l12 12M18 6 6 18"/></svg>
+                Clear All Notifications
+            </button>
+        </div>
+        <div style="margin-bottom:20px;display:flex;flex-direction:column;gap:8px;">
+            ${nr.data.map(n => {
+                const isNoMatch = n.Message.includes('No qualified');
+                return isNoMatch
+                    ? `<div class="notice notice-warning">
+                           <svg class="icon" viewBox="0 0 24 24">
+                               <path d="M12 3.5 2 20.5h20L12 3.5Z"/>
+                               <path d="M12 10v4.2M12 17.2h.01"/></svg>
+                           <div><strong>NO MATCH ALERT:</strong>
+                           ${escapeHtml(n.Message)}
+                           <small>Date: ${n.SentDate}</small></div>
+                       </div>`
+                    : `<div class="notice notice-success">
+                           <svg class="icon" viewBox="0 0 24 24">
+                               <path d="M4.5 12.5 9.5 17.5 19.5 6.5"/></svg>
+                           <div><strong>MATCH CONFIRMED:</strong>
+                           ${escapeHtml(n.Message)}
+                           <small>Date: ${n.SentDate}</small></div>
+                       </div>`;
+            }).join('')}
+        </div>`;
+}
         let box = document.getElementById('hospNotifBox');
         if (!box) {
             box    = document.createElement('div');
@@ -1507,20 +1542,20 @@ async function renderMyProfile() {
     }
 
     let availHTML = '';
-    if (pr.AVB_STU === 'Reserved / Donating') {
-        availHTML = `<span>${escapeHtml(pr.AVB_STU)}</span>
-                     <span class="joined-tag"
-                           style="font-size:0.72rem;">🔒 Locked during active donation</span>`;
-    } else {
-        availHTML = `<span>${escapeHtml(pr.AVB_STU)}</span>
-                     <button onclick="toggleDonorAvailability()"
-                         class="btn-icon-sm ${pr.AVB_STU === 'Available'
-                             ? 'btn-toggle-off' : 'btn-toggle-on'}"
-                         style="font-size:0.7rem;padding:5px 10px;">
-                         ${pr.AVB_STU === 'Available' ? 'Mark Unavailable' : 'Mark Available'}
-                     </button>`;
-    }
-
+  if (pr.AVB_STU === 'Reserved / Donating') {
+    availHTML = `<span>${escapeHtml(pr.AVB_STU)}</span>
+                 <span class="joined-tag" style="font-size:0.72rem;">Locked during active donation</span>`;
+} else if (pr.AVB_STU === 'Cooldown') {
+    availHTML = `<span>${escapeHtml(pr.AVB_STU)}</span>
+                 <span class="joined-tag" style="font-size:0.72rem;">Locked until ${escapeHtml(pr.cooldown_until || '-')}</span>`;
+} else {
+    availHTML = `<span>${escapeHtml(pr.AVB_STU)}</span>
+                 <button onclick="toggleDonorAvailability()"
+                     class="btn-icon-sm ${pr.AVB_STU === 'Available' ? 'btn-toggle-off' : 'btn-toggle-on'}"
+                     style="font-size:0.7rem;padding:5px 10px;">
+                     ${pr.AVB_STU === 'Available' ? 'Mark Unavailable' : 'Mark Available'}
+                 </button>`;
+}
     profileCont.innerHTML = `
         <div class="profile-detail-grid">
             <div class="profile-detail">
@@ -1595,6 +1630,7 @@ async function openEditDonorProfile() {
     document.getElementById('editProfileEmail').value    = pr.email          || '';
     document.getElementById('editProfileAdd').value      = pr.ADD_col        || '';
     document.getElementById('editProfileBarangay').value = pr.BARANGAY_BarangayID || '1';
+    document.getElementById('editProfileUsername').value = session.Username || '';
 
     clearAllValidations('formEditDonorProfile');
     document.getElementById('editDonorProfileModal').style.display = 'flex';
@@ -1612,6 +1648,7 @@ async function handleEditDonorProfile(e) {
     const lst   = document.getElementById('editProfileLstName');
     const phone = document.getElementById('editProfilePhone');
     const email = document.getElementById('editProfileEmail');
+    const uname = document.getElementById('editProfileUsername');
 
     let valid = true;
     if (!validateNameField(fir, 'First Name'))                      valid = false;
@@ -1619,11 +1656,13 @@ async function handleEditDonorProfile(e) {
     if (!validateNameField(lst, 'Last Name'))                       valid = false;
     if (!validatePhoneField(phone))                                 valid = false;
     if (email.value && !validateEmailField(email, false))           valid = false;
+    if (!validateUsernameField(uname)) valid = false;
 
     if (!valid) return;
 
     const payload = {
         donor_id:            pr.donor_id,
+        Username: uname.value.trim(),
         FIR_name:            fir.value.trim(),
         MID_NAME:            mid.value.trim(),
         LST_name:            lst.value.trim(),
@@ -1639,6 +1678,10 @@ async function handleEditDonorProfile(e) {
     Object.assign(session.entityData, payload);
     session.entityData.BarangayName = barangayMap[payload.BARANGAY_BarangayID];
 
+    session.Username = payload.Username;
+const welcome = document.getElementById('welcomeUserMsg');
+if (welcome) welcome.innerText = `Logged in: ${session.Username}`;
+
     alert('✅ Personal details updated successfully!');
     document.getElementById('editDonorProfileModal').style.display = 'none';
     renderMyProfile();
@@ -1648,11 +1691,16 @@ async function handleEditDonorProfile(e) {
 async function toggleDonorAvailability() {
     const pr = session.entityData;
     if (!pr) return;
+    if (pr.AVB_STU === 'Cooldown') {
+    const until = pr.cooldown_until ? ` until ${pr.cooldown_until}` : '';
+    alert(`Your availability is locked during cooldown${until}.`);
+    return;
+}
 
-    if (pr.AVB_STU === 'Reserved / Donating') {
-        alert('Your availability is locked while a donation is in progress.');
-        return;
-    }
+  if (pr.AVB_STU === 'Reserved / Donating' || pr.AVB_STU === 'Cooldown') {
+    alert('Your availability is locked while a donation or cooldown is active.');
+    return;
+}
 
     const newStatus = pr.AVB_STU === 'Available' ? 'Not Available' : 'Available';
     if (!confirm(`Change your availability to "${newStatus}"?`)) return;
@@ -1692,14 +1740,15 @@ async function respondToRequest(notifId, reqId, choice) {
         ? `Donor ${pr.FIR_name} ${pr.LST_name} (${pr.BloodTypeName || bloodTypeMap[pr.BLOOD_TYPE_BloodTypeID]}) ACCEPTED emergency request #${reqId}. Contact: ${pr.phone_number}`
         : null;
 
-    const res = await apiPut('notifications.php?action=respond', {
-        donor_id:         pr.donor_id,
-        donor_user_id:    session.UserID,
-        REQ_id:           reqId,
-        choice:           choice,
-        hospital_user_id: hospitalUserId,
-        hospital_message: hospitalMsg
-    });
+  const res = await apiPut('notifications.php?action=respond', {
+    NotificationID:   notifId,
+    donor_id:         pr.donor_id,
+    donor_user_id:    session.UserID,
+    REQ_id:           reqId,
+    choice:           choice,
+    hospital_user_id: hospitalUserId,
+    hospital_message: hospitalMsg
+});
 
     if (!res.success) { alert(res.message); return; }
 
@@ -1808,10 +1857,19 @@ async function renderDrivesTable() {
         let actionCell = '';
 
         // ── FIX: use == loose equality ────────────────────────
-        if (session.ROLES_RoleID == 4) {
-            const joined = myJoinedIds.includes(parseInt(drv.Blood_Drive_id));
-            if (joined) {
-                actionCell = `<span class="status-pill verified">✓ Joined</span>`;
+       if (session.ROLES_RoleID == 4) {
+    const joined = myJoinedIds.includes(parseInt(drv.Blood_Drive_id));
+    if (joined) {
+        if (['Completed','Cancelled'].includes(drv.STU)) {
+            actionCell = `<span class="status-pill verified">✓ Joined</span>`;
+        } else {
+            actionCell = `<button onclick="cancelBloodDrive(${drv.Blood_Drive_id})"
+                class="btn-icon-sm btn-decline">
+                <svg class="icon" viewBox="0 0 24 24" width="13" height="13" stroke="white">
+                    <path d="M6 6l12 12M18 6 6 18"/></svg>
+                Cancel Join</button>`;
+        }
+    } else if (['Completed','Cancelled'].includes(drv.STU)) {
             } else if (['Completed','Cancelled'].includes(drv.STU)) {
                 actionCell = `<span class="status-pill inactive">${escapeHtml(drv.STU)}</span>`;
             } else {
@@ -1822,12 +1880,20 @@ async function renderDrivesTable() {
                     Join Drive</button>`;
             }
         } else if (session.ROLES_RoleID == 1 || session.ROLES_RoleID == 3) {
-            actionCell = `<button onclick="openEditDrive(${drv.Blood_Drive_id})"
-                class="btn-icon-sm btn-edit">
-                <svg class="icon" viewBox="0 0 24 24" width="13" height="13" stroke="white">
-                    <path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/></svg>
-                Edit</button>`;
-        }
+    actionCell = `
+        <button onclick="openEditDrive(${drv.Blood_Drive_id})"
+            class="btn-icon-sm btn-edit">
+            <svg class="icon" viewBox="0 0 24 24" width="13" height="13" stroke="white">
+                <path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/></svg>
+            Edit
+        </button>
+        <button onclick="deleteBloodDrive(${drv.Blood_Drive_id})"
+            class="btn-icon-sm btn-decline" style="margin-left:6px;">
+            <svg class="icon" viewBox="0 0 24 24" width="13" height="13" stroke="white">
+                <path d="M6 6l12 12M18 6 6 18"/></svg>
+            Delete
+        </button>`;
+}
 
         return `<tr>
             <td>${drv.Blood_Drive_id}</td>
@@ -1852,6 +1918,10 @@ async function joinBloodDrive(driveId) {
         alert('Only verified donors can join blood drives. Please wait for CHO Admin verification.');
         return;
     }
+    if (pr.AVB_STU !== 'Available') {
+    alert('Only donors with "Available" status can join blood drives.');
+    return;
+}
     if (!confirm('Join this blood drive?')) return;
 
     const res = await apiPost('drives_par.php', {
@@ -1862,6 +1932,32 @@ async function joinBloodDrive(driveId) {
     if (!res.success) { alert(res.message); return; }
     alert('✅ You are now registered for this blood drive!');
     renderDrivesTable();
+}
+
+async function cancelBloodDrive(driveId) {
+    const pr = session.entityData;
+    if (!pr?.donor_id) {
+        alert('No donor record connected to this account.');
+        return;
+    }
+
+    if (!confirm('Cancel your blood drive participation?')) return;
+
+    const res = await apiPut('drives_par.php?action=cancel', {
+        Blood_Drive_id: driveId,
+        donor_id: pr.donor_id
+    });
+
+    if (!res.success) {
+        alert(res.message);
+        return;
+    }
+
+    alert('Participation cancelled successfully.');
+    renderDrivesTable();
+    if (document.getElementById('viewMyProfile')?.style.display !== 'none') {
+        renderMyProfile();
+    }
 }
 
 async function openEditDrive(driveId) {
@@ -1910,6 +2006,23 @@ async function handleEditDrive(e) {
     renderDrivesTable();
 }
 
+async function deleteBloodDrive(driveId) {
+    if (!confirm(`Delete blood drive #${driveId}? This cannot be undone.`)) return;
+
+    const res = await apiPut('drives.php?action=delete', {
+        Blood_Drive_id: driveId,
+        actor_user_id: session.UserID
+    });
+
+    if (!res.success) {
+        alert(res.message);
+        return;
+    }
+
+    alert('Blood drive deleted successfully.');
+    renderDrivesTable();
+}
+
 // ══════════════════════════════════════════════════════════════
 // USER ACCOUNTS
 // ══════════════════════════════════════════════════════════════
@@ -1949,6 +2062,13 @@ async function renderUsersTable() {
                     <path d="M12 3v9"/>
                     <path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>
                 ${isActive ? 'Deactivate' : 'Activate'}</button>`;
+
+                actions += ` <button onclick="deleteUserAccount(${acc.UserID}, '${escapeHtml(acc.Username)}')"
+        class="btn-icon-sm btn-decline" style="margin-left:4px;">
+        <svg class="icon" viewBox="0 0 24 24" width="13" height="13" stroke="white">
+            <path d="M6 6l12 12M18 6 6 18"/></svg>
+        Delete</button>`;
+                
         } else {
             actions += ` <span style="font-size:0.75rem;color:var(--ink-faint);">
                 (current session)</span>`;
@@ -2012,6 +2132,28 @@ async function toggleUserStatus(userId) {
     renderUsersTable();
 }
 
+async function deleteUserAccount(userId, username) {
+    if (userId === session.UserID) {
+        alert('You cannot delete your own active session account.');
+        return;
+    }
+
+    if (!confirm(`Delete user "${username}" permanently?`)) return;
+
+    const res = await apiPut('users.php?action=delete', {
+        UserID: userId,
+        actor_user_id: session.UserID
+    });
+
+    if (!res.success) {
+        alert(res.message);
+        return;
+    }
+
+    alert(`User "${username}" deleted successfully.`);
+    renderUsersTable();
+}
+
 // ══════════════════════════════════════════════════════════════
 // MANAGE NOTIFICATIONS (CHO Admin)
 // ══════════════════════════════════════════════════════════════
@@ -2050,6 +2192,22 @@ async function renderManageNotifications() {
 async function dismissAdminNotification(notificationId) {
     await apiPut('notifications.php?action=dismiss', { NotificationID: notificationId });
     renderManageNotifications();
+}
+
+async function clearHospitalNotifications() {
+    if (!confirm('Clear all notifications?')) return;
+
+    const res = await apiPut('notifications.php?action=clear_all', {
+        user_id: session.UserID
+    });
+
+    if (!res.success) {
+        alert(res.message || 'Failed to clear notifications.');
+        return;
+    }
+
+    alert('All notifications cleared.');
+    renderRequestsTable();
 }
 
 // ══════════════════════════════════════════════════════════════

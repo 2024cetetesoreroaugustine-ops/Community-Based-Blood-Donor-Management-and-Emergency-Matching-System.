@@ -79,7 +79,7 @@ function int_val_or_null(array $arr, string $key): ?int
 
 function is_valid_username(string $value): bool
 {
-    return (bool)preg_match('/^[a-zA-Z0-9_]{3,30}$/', $value);
+    return (bool)preg_match('/^[A-Z][a-zA-Z0-9_]{2,29}$/', $value);
 }
 
 function is_valid_password(string $value): bool

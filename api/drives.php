@@ -8,75 +8,96 @@ $pdo = get_pdo();
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
 if ($method === 'GET') {
-    $donorId = isset($_GET['donor_id']) ? (int)$_GET['donor_id'] : 0;
-    if ($donorId <= 0) {
-        json_response(false, 'donor_id is required.', null, 400);
-    }
+    $stmt = $pdo->query("SELECT bd.*, b.BarangayName
+        FROM Blood_Drive bd
+        LEFT JOIN BARANGAY b ON b.BarangayID = bd.BARANGAY_BarangayID
+        ORDER BY bd.Blood_Drive_id DESC");
 
-    $stmt = $pdo->prepare("SELECT p.ParticipationID,
-            p.ParticipationStatus,
-            p.Blood_Drive_Blood_Drive_id,
-            p.Volunteer_Blood_donor_donor_id,
-            d.EVT_name,
-            d.LOC,
-            d.SHD,
-            d.STU
-        FROM BLOOD_DRIVE_PAR p
-        INNER JOIN Blood_Drive d ON d.Blood_Drive_id = p.Blood_Drive_Blood_Drive_id
-        WHERE p.Volunteer_Blood_donor_donor_id = ?
-        ORDER BY p.ParticipationID DESC");
-    $stmt->execute([$donorId]);
-
-    json_response(true, 'Drive participation records fetched.', $stmt->fetchAll());
+    json_response(true, 'Blood drives fetched.', $stmt->fetchAll());
 }
 
 if ($method === 'POST') {
     $body = read_json_body();
 
-    $driveId = int_val_or_null($body, 'Blood_Drive_id');
-    $donorId = int_val_or_null($body, 'donor_id');
+    $evt = str_val($body, 'EVT_name');
+    $loc = str_val($body, 'LOC');
+    $shd = str_val($body, 'SHD');
+    $barangayId = int_val_or_null($body, 'BARANGAY_BarangayID') ?? 1;
+    $adminId = int_val_or_null($body, 'CIT_Health_OFF_ADM_admin_id');
 
-    if (!$driveId || !$donorId) {
-        json_response(false, 'Blood_Drive_id and donor_id are required.', null, 400);
+    if ($evt === '' || $loc === '' || $shd === '') {
+        json_response(false, 'Event name, location, and schedule are required.', null, 400);
     }
 
-    $checkDrive = $pdo->prepare("SELECT STU FROM Blood_Drive WHERE Blood_Drive_id = ? LIMIT 1");
-    $checkDrive->execute([$driveId]);
-    $drive = $checkDrive->fetch();
-
-    if (!$drive) {
-        json_response(false, 'Blood drive not found.', null, 404);
+    if (!is_not_past_date($shd)) {
+        json_response(false, 'Schedule date cannot be in the past.', null, 400);
     }
 
-    if (in_array((string)$drive['STU'], ['Completed', 'Cancelled'], true)) {
-        json_response(false, 'Cannot join completed or cancelled drives.', null, 400);
-    }
+    $stmt = $pdo->prepare("INSERT INTO Blood_Drive
+        (EVT_name, LOC, SHD, STU, BARANGAY_BarangayID, CIT_Health_OFF_ADM_admin_id)
+        VALUES (?, ?, ?, 'Scheduled', ?, ?)");
+    $stmt->execute([$evt, $loc, $shd, $barangayId, $adminId]);
 
-    $checkDonor = $pdo->prepare("SELECT d.donor_id,
-            COALESCE(v.VerificationStatus, 'Pending') AS verificationStatus
-        FROM Volunteer_Blood_donor d
-        LEFT JOIN DONOR_VERIFICATION v ON v.Volunteer_Blood_donor_donor_id = d.donor_id
-        WHERE d.donor_id = ? LIMIT 1");
-    $checkDonor->execute([$donorId]);
-    $donor = $checkDonor->fetch();
-
-    if (!$donor) {
-        json_response(false, 'Donor record not found.', null, 404);
-    }
-
-    if ((string)$donor['verificationStatus'] !== 'Verified') {
-        json_response(false, 'Only verified donors can join blood drives.', null, 403);
-    }
-
-    $stmt = $pdo->prepare("INSERT IGNORE INTO BLOOD_DRIVE_PAR
-        (ParticipationStatus, Blood_Drive_Blood_Drive_id, Volunteer_Blood_donor_donor_id)
-        VALUES ('Joined', ?, ?)");
-    $stmt->execute([$driveId, $donorId]);
-
-    json_response(true, 'Drive participation recorded.', [
-        'Blood_Drive_id' => $driveId,
-        'donor_id' => $donorId,
+    json_response(true, 'Blood drive created successfully.', [
+        'Blood_Drive_id' => (int)$pdo->lastInsertId(),
     ]);
+}
+
+if ($method === 'PUT') {
+    $body = read_json_body();
+    $action = get_action();
+
+   if ($action === 'delete') {
+    $id = int_val_or_null($body, 'Blood_Drive_id');
+    $actorUserId = int_val_or_null($body, 'actor_user_id');
+
+    if (!$id || !$actorUserId) {
+        json_response(false, 'Blood_Drive_id and actor_user_id are required.', null, 400);
+    }
+
+    $actor = $pdo->prepare("SELECT ROLES_RoleID, active FROM USERS WHERE UserID = ? LIMIT 1");
+    $actor->execute([$actorUserId]);
+    $actorRow = $actor->fetch();
+
+    if (
+        !$actorRow ||
+        (int)$actorRow['active'] !== 1 ||
+        !in_array((int)$actorRow['ROLES_RoleID'], [1, 3], true)
+    ) {
+        json_response(false, 'Only Admin or BHW can delete blood drives.', null, 403);
+    }
+
+    $stmt = $pdo->prepare("DELETE FROM Blood_Drive WHERE Blood_Drive_id = ?");
+    $stmt->execute([$id]);
+
+    json_response(true, 'Blood drive deleted successfully.', ['Blood_Drive_id' => $id]);
+}
+
+    $id = int_val_or_null($body, 'Blood_Drive_id');
+    if (!$id) {
+        json_response(false, 'Blood_Drive_id is required.', null, 400);
+    }
+
+    $evt = str_val($body, 'EVT_name');
+    $loc = str_val($body, 'LOC');
+    $shd = str_val($body, 'SHD');
+    $barangayId = int_val_or_null($body, 'BARANGAY_BarangayID') ?? 1;
+    $stu = str_val($body, 'STU', 'Scheduled');
+
+    if ($evt === '' || $loc === '' || $shd === '') {
+        json_response(false, 'Event name, location, and schedule are required.', null, 400);
+    }
+
+    if (!is_not_past_date($shd)) {
+        json_response(false, 'Schedule date cannot be in the past.', null, 400);
+    }
+
+    $stmt = $pdo->prepare("UPDATE Blood_Drive SET
+        EVT_name = ?, LOC = ?, SHD = ?, BARANGAY_BarangayID = ?, STU = ?
+        WHERE Blood_Drive_id = ?");
+    $stmt->execute([$evt, $loc, $shd, $barangayId, $stu, $id]);
+
+    json_response(true, 'Blood drive updated successfully.', ['Blood_Drive_id' => $id]);
 }
 
 json_response(false, 'Method not allowed.', null, 405);

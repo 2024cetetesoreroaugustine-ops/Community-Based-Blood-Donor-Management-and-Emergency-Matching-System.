@@ -63,10 +63,11 @@ if ($method === 'PUT') {
             WHERE Match_id = ?");
         $updMatch->execute([$donationId]);
 
-        $updDonor = $pdo->prepare("UPDATE Volunteer_Blood_donor
-            SET AVB_STU = 'Available'
-            WHERE donor_id = ?");
-        $updDonor->execute([(int)$donation['Volunteer_Blood_donor_donor_id']]);
+$updDonor = $pdo->prepare("UPDATE Volunteer_Blood_donor
+    SET AVB_STU = 'Cooldown',
+        cooldown_until = DATE_ADD(CURDATE(), INTERVAL 60 DAY)
+    WHERE donor_id = ?");
+$updDonor->execute([(int)$donation['Volunteer_Blood_donor_donor_id']]);
 
         if (!empty($donation['EMG_Blood_REQ_REQ_id'])) {
             $updReq = $pdo->prepare("UPDATE EMG_Blood_REQ

@@ -35,6 +35,17 @@ function get_pdo(): PDO
     return $pdo;
 }
 
+function has_column(PDO $pdo, string $tableName, string $columnName): bool
+{
+    $stmt = $pdo->prepare("SELECT COUNT(*) AS c
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ?
+          AND COLUMN_NAME = ?");
+    $stmt->execute([$tableName, $columnName]);
+    $row = $stmt->fetch();
+    return ((int)($row['c'] ?? 0)) > 0;
+}
 function ensure_schema(PDO $pdo): void
 {
     static $initialized = false;
@@ -64,6 +75,8 @@ function ensure_schema(PDO $pdo): void
             Password VARCHAR(255) NOT NULL,
             ROLES_RoleID INT NOT NULL,
             active TINYINT(1) NOT NULL DEFAULT 1,
+            must_change_password TINYINT(1) NOT NULL DEFAULT 0,
+            password_updated_at DATETIME NULL,
             CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT fk_users_role FOREIGN KEY (ROLES_RoleID) REFERENCES ROLES(RoleID)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -190,6 +203,13 @@ function ensure_schema(PDO $pdo): void
 
     foreach ($queries as $sql) {
         $pdo->exec($sql);
+    }
+// Safe evolution for existing deployments (MySQL-version compatible).
+    if (!has_column($pdo, 'USERS', 'must_change_password')) {
+        $pdo->exec("ALTER TABLE USERS ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0");
+    }
+    if (!has_column($pdo, 'USERS', 'password_updated_at')) {
+        $pdo->exec("ALTER TABLE USERS ADD COLUMN password_updated_at DATETIME NULL");
     }
 
     $pdo->exec("INSERT IGNORE INTO ROLES (RoleID, RoleName) VALUES

@@ -5,6 +5,12 @@ declare(strict_types=1);
 require_once __DIR__ . '/db.php';
 
 $pdo = get_pdo();
+$pdo->exec("UPDATE Volunteer_Blood_donor
+    SET AVB_STU = 'Available',
+        cooldown_until = NULL
+    WHERE AVB_STU = 'Cooldown'
+      AND cooldown_until IS NOT NULL
+      AND cooldown_until <= CURDATE()");
 $action = get_action();
 
 if ($action === 'login') {
@@ -18,7 +24,7 @@ if ($action === 'login') {
         json_response(false, 'Username and password are required.', null, 400);
     }
 
-    $stmt = $pdo->prepare("SELECT UserID, Username, Password, ROLES_RoleID, active FROM USERS WHERE Username = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT UserID, Username, Password, ROLES_RoleID, active, must_change_password FROM USERS WHERE Username = ? LIMIT 1");
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
@@ -69,6 +75,7 @@ if ($action === 'login') {
         'UserID' => (int)$user['UserID'],
         'Username' => $user['Username'],
         'ROLES_RoleID' => $roleId,
+        'must_change_password' => (int)$user['must_change_password'],
         'entityData' => $entityData,
     ]);
 }
@@ -102,7 +109,9 @@ if ($action === 'register') {
         json_response(false, 'Invalid username format.', null, 400);
     }
 
-    if (!is_valid_password($password)) {
+   // Temporary password mode for accounts created by admin.
+    // Strong password is enforced later when user changes password in Account Settings.
+    if ($roleId === 1 && !is_valid_password($password)) {
         json_response(false, 'Password must be at least 8 chars with uppercase, lowercase, number, and special character.', null, 400);
     }
 
@@ -115,8 +124,10 @@ if ($action === 'register') {
     $pdo->beginTransaction();
     try {
         $hash = password_hash($password, PASSWORD_DEFAULT);
-        $insUser = $pdo->prepare("INSERT INTO USERS (Username, Password, ROLES_RoleID, active) VALUES (?, ?, ?, 1)");
-        $insUser->execute([$username, $hash, $roleId]);
+        $mustChangePassword = ($roleId === 1) ? 0 : 1;
+        $insUser = $pdo->prepare("INSERT INTO USERS (Username, Password, ROLES_RoleID, active, must_change_password, password_updated_at)
+            VALUES (?, ?, ?, 1, ?, ?) ");
+        $insUser->execute([$username, $hash, $roleId, $mustChangePassword, $mustChangePassword ? null : date('Y-m-d H:i:s')]);
         $userId = (int)$pdo->lastInsertId();
 
         if ($roleId === 1) {
@@ -195,6 +206,136 @@ if ($action === 'register') {
         }
         json_response(false, $e->getMessage(), null, 400);
     }
+}
+
+if ($action === 'change_password') {
+    require_method(['POST']);
+    $body = read_json_body();
+
+    $userId = int_val_or_null($body, 'user_id');
+    $currentPassword = (string)($body['current_password'] ?? '');
+    $newPassword = (string)($body['new_password'] ?? '');
+
+    if (!$userId || $newPassword === '') {
+        json_response(false, 'user_id and new_password are required.', null, 400);
+    }
+
+    if (!is_valid_password($newPassword)) {
+        json_response(false, 'New password must be at least 8 chars with uppercase, lowercase, number, and special character.', null, 400);
+    }
+
+    $stmt = $pdo->prepare("SELECT UserID, Password, must_change_password FROM USERS WHERE UserID = ? LIMIT 1");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        json_response(false, 'User account not found.', null, 404);
+    }
+
+    $mustChange = (int)$user['must_change_password'] === 1;
+    if (!$mustChange && !password_verify($currentPassword, (string)$user['Password'])) {
+        json_response(false, 'Current password is incorrect.', null, 403);
+    }
+
+    if ($mustChange && $currentPassword !== '' && !password_verify($currentPassword, (string)$user['Password'])) {
+        json_response(false, 'Temporary password is incorrect.', null, 403);
+    }
+
+    $hash = password_hash($newPassword, PASSWORD_DEFAULT);
+    $upd = $pdo->prepare("UPDATE USERS
+        SET Password = ?, must_change_password = 0, password_updated_at = NOW()
+        WHERE UserID = ?");
+    $upd->execute([$hash, $userId]);
+
+    json_response(true, 'Password changed successfully.', ['UserID' => $userId]);
+}
+
+if ($action === 'update_my_profile') {
+    require_method(['POST']);
+    $body = read_json_body();
+
+    $userId = int_val_or_null($body, 'user_id');
+    if (!$userId) {
+        json_response(false, 'user_id is required.', null, 400);
+    }
+
+    $u = $pdo->prepare("SELECT ROLES_RoleID FROM USERS WHERE UserID = ? LIMIT 1");
+    $u->execute([$userId]);
+    $row = $u->fetch();
+    if (!$row) {
+        json_response(false, 'User account not found.', null, 404);
+    }
+
+    $roleId = (int)$row['ROLES_RoleID'];
+
+    $username = str_val($body, 'Username');
+if ($username !== '') {
+    if (!is_valid_username($username)) {
+        json_response(false, 'Invalid username format.', null, 400);
+    }
+
+    $dup = $pdo->prepare("SELECT UserID FROM USERS WHERE Username = ? AND UserID <> ? LIMIT 1");
+    $dup->execute([$username, $userId]);
+    if ($dup->fetch()) {
+        json_response(false, 'Username already exists.', null, 409);
+    }
+
+    $updUser = $pdo->prepare("UPDATE USERS SET Username = ? WHERE UserID = ?");
+    $updUser->execute([$username, $userId]);
+}
+
+    if ($roleId === 1) {
+        $fir = str_val($body, 'FIR_name');
+        $lst = str_val($body, 'LST_name');
+        if (!is_valid_name($fir) || !is_valid_name($lst)) {
+            json_response(false, 'Valid first/last name are required.', null, 400);
+        }
+
+        $stmt = $pdo->prepare("UPDATE CIT_Health_OFF_ADM SET FIR_name = ?, LST_name = ? WHERE USERS_UserID = ?");
+        $stmt->execute([$fir, $lst, $userId]);
+        json_response(true, 'Admin profile updated.', ['user_id' => $userId]);
+    }
+
+    if ($roleId === 2) {
+        $hospitalName = str_val($body, 'Hospital_name');
+        $ctt = str_val($body, 'CTT_number');
+        $add = str_val($body, 'ADD_col');
+        $barangayId = int_val_or_null($body, 'BARANGAY_BarangayID') ?? 1;
+
+        if ($hospitalName === '' || !is_valid_phone_ph($ctt)) {
+            json_response(false, 'Hospital name and valid contact number are required.', null, 400);
+        }
+
+        $stmt = $pdo->prepare("UPDATE Hospital_STF
+            SET Hospital_name = ?, `ADD` = ?, CTT_number = ?, BARANGAY_BarangayID = ?
+            WHERE USERS_UserID = ?");
+        $stmt->execute([$hospitalName, $add, $ctt, $barangayId, $userId]);
+        json_response(true, 'Hospital profile updated.', ['user_id' => $userId]);
+    }
+
+    if ($roleId === 3) {
+        $fir = str_val($body, 'FIR_name');
+        $lst = str_val($body, 'LST_name');
+        $ctt = str_val($body, 'CTT_number');
+        $barangayId = int_val_or_null($body, 'BARANGAY_BarangayID') ?? 1;
+
+        if (!is_valid_name($fir) || !is_valid_name($lst) || !is_valid_phone_ph($ctt)) {
+            json_response(false, 'BHW profile fields are invalid.', null, 400);
+        }
+
+        $stmt = $pdo->prepare("UPDATE Barangay_Health_Worker
+            SET FIR_name = ?, LST_name = ?, CTT_number = ?, BARANGAY_BarangayID = ?
+            WHERE USERS_UserID = ?");
+        $stmt->execute([$fir, $lst, $ctt, $barangayId, $userId]);
+        json_response(true, 'BHW profile updated.', ['user_id' => $userId]);
+    }
+
+    if ($roleId === 4) {
+        // Donor profile update remains in donors.php?action=update_profile for current flow.
+        json_response(false, 'Use donor profile update module for donor accounts.', null, 400);
+    }
+
+    json_response(false, 'Unsupported role.', null, 400);
 }
 
 json_response(false, 'Invalid auth action.', null, 400);
