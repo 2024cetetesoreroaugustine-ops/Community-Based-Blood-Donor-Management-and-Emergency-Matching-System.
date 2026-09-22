@@ -258,10 +258,12 @@
                 <input id="patchConfirmPassword" type="password" class="form-control" placeholder="Confirm new password">
               </div>
             </div>
-            <small id="patchStrongHint" style="display:block;margin-top:4px;color:var(--ink-soft);font-size:0.75rem;">
-              Strong password required: at least 8 characters, uppercase, lowercase, number, and special character.
-            </small>
-            <button id="patchSaveAccountSettingsBtn" type="submit" class="btn-submit">Save Changes</button>
+          <small id="patchStrongHint" style="display:block;margin-top:4px;color:var(--ink-soft);font-size:0.75rem;">
+  Strong password required: at least 8 characters, uppercase, lowercase, number, and special character.
+</small>
+<small id="patchAccountSettingsError" class="error-message" style="display:none;margin-top:8px;"></small>
+<small id="patchAccountSettingsSuccess" class="success-message" style="display:none;margin-top:8px;"></small>
+<button id="patchSaveAccountSettingsBtn" type="submit" class="btn-submit">Save Changes</button>
           </form>
         </div>
       `;
@@ -382,8 +384,50 @@ const usernameField = `
     `;
   }
 
+   function clearPatchAccountSettingsMessages() {
+  const err = document.getElementById('patchAccountSettingsError');
+  const ok = document.getElementById('patchAccountSettingsSuccess');
+  if (err) {
+    err.style.display = 'none';
+    err.textContent = '';
+  }
+  if (ok) {
+    ok.style.display = 'none';
+    ok.textContent = '';
+  }
+}
+
+function showPatchAccountSettingsError(message) {
+  const err = document.getElementById('patchAccountSettingsError');
+  const ok = document.getElementById('patchAccountSettingsSuccess');
+  if (ok) {
+    ok.style.display = 'none';
+    ok.textContent = '';
+  }
+  if (err) {
+    err.textContent = message || 'Something went wrong.';
+    err.style.display = 'block';
+  }
+}
+
+function showPatchAccountSettingsSuccess(message) {
+  const err = document.getElementById('patchAccountSettingsError');
+  const ok = document.getElementById('patchAccountSettingsSuccess');
+  if (err) {
+    err.style.display = 'none';
+    err.textContent = '';
+  }
+  if (ok) {
+    ok.textContent = message || 'Saved successfully.';
+    ok.style.display = 'block';
+  }
+}
+
+
+
   async function handleAccountSettingsSubmit(e) {
     e.preventDefault();
+    clearPatchAccountSettingsMessages();
     if (typeof window.apiPost !== 'function' || !window.session || !window.session.UserID) return;
 
     const roleId = getRoleId();
@@ -398,7 +442,7 @@ if (newUsername) {
 }
 
     // Profile update per role (optional fields)
-   let profilePayload = { Username: newUsername };
+  let profilePayload = null;
     if (roleId === 1) {
       profilePayload = {
          ...profilePayload,
@@ -421,17 +465,16 @@ if (newUsername) {
       };
     }
 
-    else if (roleId === 4) {
-  profilePayload = { Username: newUsername };
-}
+    
 
-    if (profilePayload) {
-      const pRes = await window.apiPost('auth.php?action=update_my_profile', profilePayload);
-      if (!pRes || !pRes.success) {
-        alert(pRes?.message || 'Profile update failed.');
-        return;
-      }
-    }
+// Donor role (4) must not call update_my_profile in auth.php.
+if (profilePayload && roleId !== 4) {
+  const pRes = await window.apiPost('auth.php?action=update_my_profile', profilePayload);
+  if (!pRes || !pRes.success) {
+    alert(pRes?.message || 'Profile update failed.');
+    return;
+  }
+}
 
     if (newUsername) {
   window.session.Username = newUsername;
@@ -445,11 +488,11 @@ if (newUsername) {
 
 if (newPassword || confirmPassword || currentPassword || window.__pulseMustChangePassword) {
       if (!newPassword || !confirmPassword) {
-        alert('Please enter new password and confirm it.');
+        showPatchAccountSettingsError('Please enter new password and confirm it.');
         return;
       }
       if (newPassword !== confirmPassword) {
-        alert('New password and confirmation do not match.');
+        showPatchAccountSettingsError('New password and confirmation do not match.');
         return;
       }
       const strong =
@@ -459,7 +502,7 @@ if (newPassword || confirmPassword || currentPassword || window.__pulseMustChang
         /[0-9]/.test(newPassword) &&
         /[\W_]/.test(newPassword);
       if (!strong) {
-        alert('New password must be strong: at least 8 chars with uppercase, lowercase, number, and special character.');
+        showPatchAccountSettingsError('New password must be strong: at least 8 chars with uppercase, lowercase, number, and special character.');
         return;
       }
       const cRes = await window.apiPost('auth.php?action=change_password', {
@@ -468,16 +511,18 @@ if (newPassword || confirmPassword || currentPassword || window.__pulseMustChang
       });
 
       if (!cRes || !cRes.success) {
-        alert(cRes?.message || 'Password change failed.');
+        showPatchAccountSettingsError(cRes?.message || 'Password change failed.');
         return;
       }
 
       window.__pulseMustChangePassword = false;
     }
 
-    alert('Account changes saved successfully.');
-    const modal = document.getElementById('patchAccountSettingsModal');
-    if (modal) modal.style.display = 'none';
+ showPatchAccountSettingsSuccess('Account changes saved successfully.');
+const modal = document.getElementById('patchAccountSettingsModal');
+setTimeout(() => {
+  if (modal) modal.style.display = 'none';
+}, 900);
   }
 
   function watchLoginAndForcePasswordChange() {

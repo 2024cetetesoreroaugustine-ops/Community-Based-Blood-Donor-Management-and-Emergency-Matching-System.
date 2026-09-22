@@ -6,6 +6,65 @@
 
 const API_BASE = 'http://localhost/BloodDonorSystem/api';
 
+function appConfirm(message, title = 'Please Confirm') {
+    return new Promise((resolve) => {
+        let overlay = document.getElementById('appConfirmOverlay');
+
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'appConfirmOverlay';
+            overlay.className = 'app-confirm-overlay';
+            overlay.innerHTML = `
+                <div class="app-confirm-box">
+                    <div class="app-confirm-title" id="appConfirmTitle"></div>
+                    <div class="app-confirm-msg" id="appConfirmMsg"></div>
+                    <div class="app-confirm-actions">
+                        <button type="button" class="app-confirm-btn app-confirm-cancel" id="appConfirmCancel">Cancel</button>
+                        <button type="button" class="app-confirm-btn app-confirm-ok" id="appConfirmOk">OK</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        const titleEl = document.getElementById('appConfirmTitle');
+        const msgEl = document.getElementById('appConfirmMsg');
+        const okBtn = document.getElementById('appConfirmOk');
+        const cancelBtn = document.getElementById('appConfirmCancel');
+
+        titleEl.textContent = title;
+        msgEl.textContent = String(message || '');
+
+        const cleanup = () => {
+            overlay.style.display = 'none';
+            okBtn.removeEventListener('click', onOk);
+            cancelBtn.removeEventListener('click', onCancel);
+            overlay.removeEventListener('click', onOverlay);
+        };
+
+        const onOk = () => { cleanup(); resolve(true); };
+        const onCancel = () => { cleanup(); resolve(false); };
+        const onOverlay = (e) => {
+            if (e.target === overlay) {
+                cleanup();
+                resolve(false);
+            }
+        };
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlay);
+
+        overlay.style.display = 'flex';
+    });
+}
+
+window.appConfirm = appConfirm;
+
+if (typeof window.appConfirm !== 'function') {
+    window.appConfirm = async (message) => confirm(String(message || ''));
+}
+
 // ── Session ───────────────────────────────────────────────────
 const session = {
     UserID:                   null,
@@ -410,12 +469,17 @@ function initValidationListeners() {
     }
 
     // Password strength on regDonorPassword
-    const regDonorPass = document.getElementById('regDonorPassword');
-    if (regDonorPass) {
-        regDonorPass.addEventListener('blur', () => {
-            validatePasswordField(regDonorPass);
-        });
-    }
+   const regDonorPass = document.getElementById('regDonorPassword');
+if (regDonorPass) {
+    regDonorPass.addEventListener('blur', () => {
+        const v = String(regDonorPass.value || '').trim();
+        if (!v) {
+            showValidationError(regDonorPass, 'Temporary password is required.');
+            return;
+        }
+        showValidationSuccess(regDonorPass);
+    });
+}
 
     // Password confirm on blur
     const staffConfirm = document.getElementById('staffRegPassConfirm');
@@ -998,7 +1062,12 @@ async function handleBhwRegister(e) {
     if (!validatePhoneField(phone))                                 valid = false;
     if (email.value && !validateEmailField(email, false))           valid = false;
     if (!validateUsernameField(uname))                              valid = false;
-    if (!validatePasswordField(pass))                               valid = false;
+    if (!pass.value.trim()) {
+    showValidationError(pass, 'Temporary password is required.');
+    valid = false;
+} else {
+    showValidationSuccess(pass);
+}
 
     if (!valid) return;
 
@@ -1133,7 +1202,7 @@ async function renderDonorsTable() {
 
 // ── VERIFY DONOR ──────────────────────────────────────────────
 async function verifyDonor(donor_id) {
-    if (!confirm(`Verify Donor ID #${donor_id}?\nThis will mark them as Verified and allow matching.`)) return;
+    if (!(await window.appConfirm(`Verify Donor ID #${donor_id}?\nThis will mark them as Verified and allow matching.`))) return;
 
     const res = await apiPut('donors.php?action=verify', {
         donor_id:           donor_id,
@@ -1148,7 +1217,7 @@ async function verifyDonor(donor_id) {
 
 // ── REJECT DONOR ──────────────────────────────────────────────
 async function rejectDonor(donor_id) {
-    if (!confirm(`Reject Donor ID #${donor_id}?\nThis will mark them as Rejected.`)) return;
+    if (!(await window.appConfirm(`Reject Donor ID #${donor_id}?\nThis will mark them as Rejected.`))) return;
 
     const res = await apiPut('donors.php?action=verify', {
         donor_id:           donor_id,
@@ -1440,9 +1509,9 @@ async function renderMatchedDonorsTable() {
 async function sendNotificationToDonor(donorId, donorUserId, donorName) {
     // ── FIX: Better null check for REQ_id ────────────────────
     if (!session.latestRequestREQid) {
-        if (!confirm(`No active request selected.\n\nDo you want to dispatch an alert to ${donorName} anyway?\n\nNote: You should submit an Emergency Request first so the system can track this properly.`)) return;
+        if (!(await window.appConfirm(`No active request selected.\n\nDo you want to dispatch an alert to ${donorName} anyway?\n\nNote: You should submit an Emergency Request first so the system can track this properly.`))) return;
     } else {
-        if (!confirm(`Send emergency alert to donor: ${donorName}?`)) return;
+        if (!(await window.appConfirm(`Send emergency alert to donor: ${donorName}?`))) return;
     }
 
     if (!donorUserId || donorUserId === 'null') {
@@ -1703,7 +1772,7 @@ async function toggleDonorAvailability() {
 }
 
     const newStatus = pr.AVB_STU === 'Available' ? 'Not Available' : 'Available';
-    if (!confirm(`Change your availability to "${newStatus}"?`)) return;
+    if (!(await window.appConfirm(`Change your availability to "${newStatus}"?`))) return;
 
     const res = await apiPut('donors.php?action=availability', {
         donor_id: pr.donor_id,
@@ -1725,7 +1794,7 @@ async function respondToRequest(notifId, reqId, choice) {
         ? `Accept this emergency blood request?\n\nYour availability will be locked to "Reserved / Donating" until the donation is confirmed by the hospital.`
         : `Decline this emergency blood request?`;
 
-    if (!confirm(confirmMsg)) return;
+    if (!(await window.appConfirm(confirmMsg))) return;
 
     let hospitalUserId = null;
     if (reqId && reqId !== 'null') {
@@ -1765,7 +1834,7 @@ async function respondToRequest(notifId, reqId, choice) {
 // CONFIRM DONATION (Hospital Staff)
 // ══════════════════════════════════════════════════════════════
 async function confirmDonation(donationId) {
-    if (!confirm(`Confirm donation #${donationId}?\nThis will mark it as completed and free the donor.`)) return;
+    if (!(await window.appConfirm(`Confirm donation #${donationId}?\nThis will mark it as completed and free the donor.`))) return;
 
     const ur    = await apiGet('users.php');
     const admin = (ur.success && ur.data)
@@ -1922,7 +1991,7 @@ async function joinBloodDrive(driveId) {
     alert('Only donors with "Available" status can join blood drives.');
     return;
 }
-    if (!confirm('Join this blood drive?')) return;
+    if (!(await window.appConfirm('Join this blood drive?'))) return;
 
     const res = await apiPost('drives_par.php', {
         Blood_Drive_id: driveId,
@@ -1941,7 +2010,7 @@ async function cancelBloodDrive(driveId) {
         return;
     }
 
-    if (!confirm('Cancel your blood drive participation?')) return;
+    if (!(await window.appConfirm('Cancel your blood drive participation?'))) return;
 
     const res = await apiPut('drives_par.php?action=cancel', {
         Blood_Drive_id: driveId,
@@ -2007,7 +2076,7 @@ async function handleEditDrive(e) {
 }
 
 async function deleteBloodDrive(driveId) {
-    if (!confirm(`Delete blood drive #${driveId}? This cannot be undone.`)) return;
+    if (!(await window.appConfirm(`Delete blood drive #${driveId}? This cannot be undone.`))) return;
 
     const res = await apiPut('drives.php?action=delete', {
         Blood_Drive_id: driveId,
@@ -2122,7 +2191,7 @@ async function toggleUserStatus(userId) {
         alert('You cannot deactivate your own account while logged in.');
         return;
     }
-    if (!confirm('Toggle this user\'s active status?')) return;
+    if (!(await window.appConfirm('Toggle this user\'s active status?'))) return;
 
     const res = await apiPut('users.php?action=toggle_status', { UserID: userId });
     if (!res.success) { alert(res.message); return; }
@@ -2138,7 +2207,7 @@ async function deleteUserAccount(userId, username) {
         return;
     }
 
-    if (!confirm(`Delete user "${username}" permanently?`)) return;
+    if (!(await window.appConfirm(`Delete user "${username}" permanently?`))) return;
 
     const res = await apiPut('users.php?action=delete', {
         UserID: userId,
@@ -2195,7 +2264,7 @@ async function dismissAdminNotification(notificationId) {
 }
 
 async function clearHospitalNotifications() {
-    if (!confirm('Clear all notifications?')) return;
+    if (!(await window.appConfirm('Clear all notifications?'))) return;
 
     const res = await apiPut('notifications.php?action=clear_all', {
         user_id: session.UserID
