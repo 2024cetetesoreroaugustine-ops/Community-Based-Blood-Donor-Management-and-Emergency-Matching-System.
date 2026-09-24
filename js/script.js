@@ -1520,14 +1520,20 @@ async function sendNotificationToDonor(donorId, donorUserId, donorName) {
     }
 
     const btName = bloodTypeMap[session.latestRequestBloodTypeId] || 'Unknown';
-    const reqId  = session.latestRequestREQid || 0;
+const reqId  = session.latestRequestREQid || 0;
+const hospitalName = session.entityData?.Hospital_name || 'Hospital Staff';
+const hospitalContact = session.entityData?.CTT_number || 'N/A';
 
-    const res = await apiPut('notifications.php?action=dispatch', {
-        Message:       `EMERGENCY ALERT: Patient urgently needs ${btName} blood. Request #${reqId}. Please respond immediately.`,
-        donor_user_id: donorUserId,
-        REQ_id:        reqId,
-        donor_id:      donorId
-    });
+const donorSmsMessage =
+    `FOR SCHOOL DEMO ONLY - PULSELINK ALERT: A patient urgently needs ${btName} blood (Request #${reqId}). ` +
+    `Open your PulseLink portal/account to ACCEPT or DECLINE. You may also call/text ${hospitalName} at ${hospitalContact}.`;
+
+const res = await apiPut('notifications.php?action=dispatch', {
+    Message:       donorSmsMessage,
+    donor_user_id: donorUserId,
+    REQ_id:        reqId,
+    donor_id:      donorId
+});
 
     if (!res.success) { alert(res.message); return; }
     alert(`✅ Emergency notification sent to donor: ${donorName}!\nThey will see it in their portal.`);

@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/mailer.php';
+
 
 $pdo = get_pdo();
 $pdo->exec("UPDATE Volunteer_Blood_donor
@@ -24,7 +26,8 @@ if ($action === 'login') {
         json_response(false, 'Username and password are required.', null, 400);
     }
 
-    $stmt = $pdo->prepare("SELECT UserID, Username, Password, ROLES_RoleID, active, must_change_password FROM USERS WHERE Username = ? LIMIT 1");
+    // NA-UPDATE NA CODE: (Isinama ang is_verified)
+$stmt = $pdo->prepare("SELECT UserID, Username, Password, ROLES_RoleID, active, is_verified, must_change_password FROM USERS WHERE Username = ? LIMIT 1");
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
@@ -32,9 +35,15 @@ if ($action === 'login') {
         json_response(false, 'Invalid username or password.', null, 401);
     }
 
-    if ((int)$user['active'] !== 1) {
-        json_response(false, 'Account is deactivated. Please contact administrator.', null, 403);
-    }
+    // 1. Tsek para sa Admin Deactivation
+if ((int)$user['active'] === 0) {
+    json_response(false, 'Account is deactivated. Please contact administrator.', null, 403);
+}
+
+// 2. Tsek para sa Email Verification
+if ((int)$user['is_verified'] === 0) {
+    json_response(false, 'Please verify your email address before logging in. Check your Gmail inbox.', null, 403);
+}
 
     $roleId = (int)$user['ROLES_RoleID'];
     $entityData = null;
@@ -125,9 +134,11 @@ if ($action === 'register') {
     try {
         $hash = password_hash($password, PASSWORD_DEFAULT);
         $mustChangePassword = ($roleId === 1) ? 0 : 1;
-        $insUser = $pdo->prepare("INSERT INTO USERS (Username, Password, ROLES_RoleID, active, must_change_password, password_updated_at)
-            VALUES (?, ?, ?, 1, ?, ?) ");
-        $insUser->execute([$username, $hash, $roleId, $mustChangePassword, $mustChangePassword ? null : date('Y-m-d H:i:s')]);
+        $verificationToken = bin2hex(random_bytes(32));
+
+$insUser = $pdo->prepare("INSERT INTO USERS (Username, Password, ROLES_RoleID, active, is_verified, verification_token, must_change_password, password_updated_at)
+    VALUES (?, ?, ?, 0, 0, ?, ?, ?) ");
+$insUser->execute([$username, $hash, $roleId, $verificationToken, $mustChangePassword, $mustChangePassword ? null : date('Y-m-d H:i:s')]);
         $userId = (int)$pdo->lastInsertId();
 
         if ($roleId === 1) {
@@ -197,6 +208,37 @@ if ($action === 'register') {
         } else {
             throw new RuntimeException('Unsupported role_id.');
         }
+
+        try {
+    $mail = getMailer();
+    $mail->setFrom('pulselinksystem@gmail.com', 'PulseLink Verification');
+    $mail->addAddress($email, $fir . ' ' . $lst);
+    
+    $mail->Priority = 1;
+    $mail->isHTML(true);
+    $mail->Subject = 'PulseLink - Verify Your Email Address';
+    
+    $verifyUrl = "http://localhost/BloodDonorSystem/api/verify-email.php?token=" . $verificationToken;
+    
+    $mail->Body = "
+        <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; max-width: 500px;'>
+            <h2 style='color: #8b0000; margin-top: 0;'>Welcome to PulseLink System!</h2>
+            <p>Hello <strong>" . htmlspecialchars($fir) . "</strong>,</p>
+            <p>Your account has been created. Please click the link below to verify your email address and activate your account:</p>
+            <p style='margin: 25px 0;'>
+                <a href='{$verifyUrl}' style='background-color: #8b0000; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;'>Verify Email Address</a>
+            </p>
+            <p style='color: #666; font-size: 0.85rem;'>Or copy and paste this link into your browser:<br><a href='{$verifyUrl}' style='color: #0066cc;'>{$verifyUrl}</a></p>
+        </div>
+    ";
+
+    $mail->AltBody = "Hello " . $fir . ",\n\nYour account has been created. Please click the link below to verify your email address and activate your account:\n" . $verifyUrl;
+
+    $mail->send();
+} catch (Exception $e) {
+    error_log("Mailer Error: " . $e->getMessage());
+}
+
 
         $pdo->commit();
         json_response(true, 'Account registered successfully.', ['UserID' => $userId]);

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/db.php';
 
 $pdo = get_pdo();
@@ -143,10 +144,15 @@ if ($method === 'POST') {
 
     $pdo->beginTransaction();
     try {
-        $insUser = $pdo->prepare("INSERT INTO USERS
-            (Username, Password, ROLES_RoleID, active, must_change_password, password_updated_at)
-            VALUES (?, ?, 4, 1, 1, NULL)");
-        $insUser->execute([$username, password_hash($password, PASSWORD_DEFAULT)]);
+        // 1. Mag-generate ng verification token
+        $verificationToken = bin2hex(random_bytes(32));
+
+        // 2. I-insert ang User sa USERS table na may active = 0, is_verified = 0, at verification_token
+       // GAWING 1 ANG ACTIVE COLUMN (Nasa gitna)
+$insUser = $pdo->prepare("INSERT INTO USERS 
+    (Username, Password, ROLES_RoleID, active, must_change_password, password_updated_at, verification_token, is_verified) 
+    VALUES (?, ?, 4, 1, 1, NULL, ?, 0)");
+        $insUser->execute([$username, password_hash($password, PASSWORD_DEFAULT), $verificationToken]);
         $userId = (int)$pdo->lastInsertId();
 
         $insDonor = $pdo->prepare("INSERT INTO Volunteer_Blood_donor (
@@ -159,6 +165,41 @@ if ($method === 'POST') {
             $phone, $email, $add,
             $userId, $barangayId, $bloodTypeId,
         ]);
+
+         // 3. Ipadala ang Verification Email
+try {
+    $mail = getMailer();
+    
+    // Tiyaking tama ang From Name at Email Address
+    $mail->setFrom('pulselinksystem@gmail.com', 'PulseLink Verification');
+    $mail->addAddress($email, $fir . ' ' . $lst);
+    
+    // Maglagay ng Priority at AltBody
+    $mail->Priority = 1; // High Priority
+    $mail->isHTML(true);
+    $mail->Subject = 'PulseLink - Verify Your Email Address';
+    
+    $verifyUrl = "http://localhost/BloodDonorSystem/api/verify-email.php?token=" . $verificationToken;
+    
+    $mail->Body = "
+        <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;'>
+            <h2 style='color: #8b0000;'>Welcome to PulseLink System!</h2>
+            <p>Hello <strong>" . htmlspecialchars($fir) . "</strong>,</p>
+            <p>Your  account has been created. Please click the link below to verify your email address and activate your account:</p>
+            <p style='margin: 25px 0;'>
+                <a href='{$verifyUrl}' style='background-color: #8b0000; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;'>Verify Email Address</a>
+            </p>
+            <p style='color: #666; font-size: 0.85rem;'>Or copy and paste this link into your browser:<br>{$verifyUrl}</p>
+        </div>
+    ";
+    
+    // Plain text alternative para sa mga mail clients
+    $mail->AltBody = "Hello " . $fir . ",\n\nPlease verify your email address by clicking this link: " . $verifyUrl;
+
+    $mail->send();
+} catch (Exception $e) {
+    error_log("Mailer Error: " . $mail->ErrorInfo);
+}
 
         $donorId = (int)$pdo->lastInsertId();
         $pdo->commit();
